@@ -6,7 +6,6 @@
 <title>Listening Exercise Builder</title>
 
 <script src="https://cdn.jsdelivr.net/npm/lz-string@1.5.0/libs/lz-string.min.js"></script>
-<script src="https://accounts.google.com/gsi/client" async defer></script>
 <script>
   window.WORKER_URL = "https://gapfill-ai-googledrive.williamspowerlifting.workers.dev";
 </script>
@@ -229,20 +228,7 @@ video, iframe.video-player{
 <body>
 
 <div class="container" id="app">
-<div id="loginSection">
 
-  <div id="g_id_onload"
-       data-client_id="187762853414-v7e6kqi1e86pkf0a2s1b92c6q245ralc.apps.googleusercontent.com"
-       data-callback="handleGoogleLogin">
-  </div>
-
-  <div class="g_id_signin"
-       data-type="standard"
-       data-size="large"
-       data-theme="outline">
-  </div>
-
-</div>
   <!-- Header row with Saved Exercises button -->
   <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:10px;margin-bottom:4px;">
     <div>
@@ -700,50 +686,6 @@ async function autoTranscribe() {
   }
 }
 
-async function handleGoogleLogin(response) {
-
-    try {
-
-        const res = await fetch(
-            WORKER + "/auth/google",
-            {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json"
-                },
-                body: JSON.stringify({
-                    token: response.credential
-                })
-            }
-        );
-
-        const data = await res.json();
-
-        if (!res.ok) {
-            throw new Error(data.error || "Login failed");
-        }
-
-        localStorage.setItem(
-            "teacherToken",
-            data.sessionToken
-        );
-
-        localStorage.setItem(
-            "teacherName",
-            data.name
-        );
-
-        document.getElementById("loginSection")
-            .style.display = "none";
-
-        console.log("Logged in");
-
-    }
-    catch (err) {
-        alert("Login failed: " + err.message);
-    }
-}
-  
 async function pollTranscriptJob(jobId) {
   const status = document.getElementById("transcribeStatus");
   for (let i = 0; i < 90; i++) {
