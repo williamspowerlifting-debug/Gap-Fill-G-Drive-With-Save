@@ -1,0 +1,1775 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Listening Exercise Builder</title>
+
+<script src="https://cdn.jsdelivr.net/npm/lz-string@1.5.0/libs/lz-string.min.js"></script>
+<script>
+  window.WORKER_URL = "https://gapfill-ai-googledrive.williamspowerlifting.workers.dev";
+</script>
+
+<style>
+body{
+  font-family:Inter,system-ui,sans-serif;
+  background:#f5f6f8;margin:0;padding:40px 20px;color:#111;
+}
+.container{max-width:780px;margin:auto;}
+h1{font-size:30px;margin-bottom:6px;}
+h2{font-size:20px;margin-top:0;color:#1f2937;}
+.sub{color:#666;margin-bottom:24px;}
+
+.card{
+  background:white;border-radius:18px;padding:22px;
+  margin-bottom:18px;box-shadow:0 10px 25px rgba(0,0,0,0.05);
+}
+
+.dropzone{
+  border:2px dashed #d0d5dd;border-radius:14px;padding:40px;
+  text-align:center;cursor:pointer;transition:all 0.2s;
+}
+.dropzone:hover, .dropzone.dragover{border-color:#4f46e5;background:#fafafa;}
+.dropzone strong{display:block;margin-bottom:6px;font-size:16px;}
+.dropzone .hint{color:#888;font-size:13px;margin-top:4px;}
+
+input[type="file"]{display:none;}
+input[type="text"], select{
+  width:100%;margin-top:8px;padding:12px;border-radius:10px;
+  border:1px solid #e5e7eb;font-size:14px;box-sizing:border-box;
+}
+label{font-weight:600;font-size:14px;color:#374151;}
+
+button{
+  padding:12px 18px;border-radius:12px;border:none;
+  background:#111;color:white;font-size:15px;cursor:pointer;
+  margin:4px 0;transition:opacity 0.2s;
+}
+button:hover{opacity:0.9;}
+button:disabled{background:#999;cursor:not-allowed;}
+button.secondary{background:#e5e7eb;color:#1f2937;}
+button.primary-blue{background:#4f46e5;}
+button.success{background:#10b981;}
+button.danger{background:#ef4444;}
+button.full{width:100%;padding:15px;font-size:16px;}
+button.big{padding:16px 24px;font-size:17px;font-weight:600;}
+
+.status{margin-top:10px;font-size:14px;color:#555;}
+.status.success{color:#065f46;}
+.status.error{color:#991b1b;}
+
+.progress-wrap{
+  background:#e5e7eb;border-radius:8px;overflow:hidden;
+  margin-top:10px;height:22px;display:none;
+}
+.progress-bar{
+  background:linear-gradient(90deg,#4f46e5,#10b981);height:100%;
+  width:0%;transition:width 0.2s;color:white;text-align:center;
+  font-size:12px;line-height:22px;
+}
+
+video, iframe.video-player{
+  width:100%;max-width:100%;height:380px;display:block;
+  border-radius:12px;border:none;background:#000;
+}
+
+.transcript-box{
+  background:#fff;border:1px solid #e5e7eb;border-radius:12px;
+  padding:20px 24px;font-size:17px;line-height:1.9;
+  max-height:480px;overflow-y:auto;
+  user-select:none;-webkit-user-select:none;
+}
+.transcript-box.edit-mode{
+  border:2px solid #4f46e5;
+  user-select:text;-webkit-user-select:text;cursor:text;
+}
+.transcript-word{
+  display:inline-block;padding:2px 6px;margin:1px;
+  border-radius:4px;cursor:pointer;
+  transition:background 0.15s, transform 0.1s;
+}
+.transcript-word:hover{background:#fef3c7;}
+.transcript-word:active{transform:scale(0.95);}
+.transcript-word.gap{
+  background:#fde68a;color:#78350f;font-weight:600;padding:2px 8px;
+}
+.transcript-word.gap:hover{background:#fbbf24;}
+.transcript-sentence{margin-bottom:6px;padding:4px 0;}
+.transcript-help{
+  background:#eff6ff;border-left:4px solid #3b82f6;
+  padding:10px 14px;border-radius:6px;margin-bottom:12px;font-size:14px;color:#1e40af;
+}
+
+.transcript-edit-header{
+  display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;
+  padding-bottom:10px;border-bottom:1px solid #e5e7eb;
+}
+.sentence-edit-row{margin-bottom:6px;}
+.sentence-edit-textarea{
+  width:100%;min-height:38px;padding:8px 10px;
+  border:1px solid #d1d5db;border-radius:8px;
+  font-family:inherit;font-size:15px;box-sizing:border-box;
+  line-height:1.6;resize:none;overflow:hidden;
+  transition:border-color 0.2s, box-shadow 0.2s;
+}
+.sentence-edit-textarea:focus{
+  border-color:#4f46e5;outline:none;
+  box-shadow:0 0 0 3px rgba(79,70,229,0.12);
+}
+
+.level-row{
+  display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:14px;
+}
+.level-row label{margin:0;}
+.level-row select{width:auto;min-width:140px;margin:0;}
+
+.help-fab{
+  position:fixed;bottom:20px;right:20px;
+  background:#4f46e5;color:white;border:none;
+  width:54px;height:54px;border-radius:50%;font-size:22px;cursor:pointer;
+  box-shadow:0 4px 12px rgba(0,0,0,0.2);z-index:9998;
+}
+.help-overlay{
+  display:none;position:fixed;top:0;left:0;width:100%;height:100%;
+  background:rgba(0,0,0,0.5);z-index:9999;
+  justify-content:center;align-items:center;padding:20px;box-sizing:border-box;
+}
+.help-overlay.show{display:flex;}
+.help-modal{
+  background:white;border-radius:14px;max-width:700px;width:100%;
+  max-height:90vh;overflow-y:auto;padding:24px;
+}
+.help-modal h2{margin-top:0;color:#4f46e5;}
+.help-modal h3{color:#1f2937;border-bottom:2px solid #e5e7eb;padding-bottom:6px;margin-top:20px;}
+.help-modal code{background:#f3f4f6;padding:2px 6px;border-radius:4px;font-size:13px;}
+.help-close{background:#ef4444;color:white;border:none;width:32px;height:32px;border-radius:50%;cursor:pointer;font-size:18px;float:right;}
+
+/* ── Saved Exercises overlay ── */
+.saved-overlay{
+  display:none;position:fixed;top:0;left:0;width:100%;height:100%;
+  background:rgba(0,0,0,0.5);z-index:9999;
+  justify-content:center;align-items:flex-start;
+  padding:20px;box-sizing:border-box;overflow-y:auto;
+}
+.saved-overlay.show{display:flex;}
+.saved-modal{
+  background:white;border-radius:14px;max-width:740px;width:100%;
+  padding:24px;margin:auto;
+}
+.saved-modal h2{margin-top:0;color:#4f46e5;}
+.exercise-item{
+  border:1px solid #e5e7eb;border-radius:12px;padding:16px;
+  margin-bottom:12px;display:flex;flex-direction:column;gap:8px;
+}
+.exercise-item-title{font-weight:700;font-size:16px;color:#111;}
+.exercise-item-meta{font-size:13px;color:#6b7280;}
+.exercise-item-actions{display:flex;gap:8px;flex-wrap:wrap;}
+.exercise-item-actions button{
+  padding:8px 14px;font-size:13px;margin:0;
+}
+.autosave-badge{
+  display:inline-block;background:#ecfdf5;color:#065f46;
+  border:1px solid #10b981;border-radius:6px;padding:2px 8px;
+  font-size:12px;font-weight:600;margin-left:8px;
+}
+
+/* Student view */
+.student-card{padding:24px;}
+.sentence-display{
+  font-size:22px;line-height:1.4;text-align:left;padding:24px;
+  background:#f9fafb;border-radius:14px;min-height:80px;
+  display:flex;flex-wrap:wrap;gap:6px;align-items:center;
+}
+.gap-input{
+  display:inline-block;width:120px;height:32px;border:none;
+  border-bottom:2px solid #4f46e5;font-size:18px;text-align:center;
+  outline:none;background:white;margin:0 2px;vertical-align:baseline;font-family:inherit;
+}
+.gap-input:focus{border-bottom-color:#10b981;}
+.gap-input.correct{border-bottom-color:#10b981;background:#ecfdf5;color:#065f46;}
+.gap-input.incorrect{border-bottom-color:#ef4444;background:#fef2f2;color:#991b1b;}
+
+.feedback-correct{
+  display:inline-flex;align-items:center;gap:4px;padding:4px 12px;
+  background:#ecfdf5;color:#065f46;border:2px solid #10b981;
+  border-radius:8px;font-weight:700;font-size:18px;
+}
+.feedback-incorrect{display:inline-flex;flex-direction:column;align-items:center;gap:2px;}
+.feedback-correct-ans{
+  font-size:13px;color:#065f46;font-weight:700;background:#ecfdf5;
+  padding:2px 8px;border-radius:4px;border:1px solid #10b981;white-space:nowrap;
+}
+.feedback-wrong-ans{
+  font-size:16px;color:#991b1b;font-weight:600;background:#fef2f2;
+  padding:3px 10px;border-radius:6px;border:2px solid #ef4444;
+  text-decoration:line-through;white-space:nowrap;
+}
+
+.progress-dots{display:flex;justify-content:center;gap:6px;margin:16px 0;flex-wrap:wrap;}
+.progress-dot{width:10px;height:10px;border-radius:50%;background:#d1d5db;}
+.progress-dot.done{background:#10b981;}
+.progress-dot.current{background:#4f46e5;transform:scale(1.4);}
+
+.score-card{text-align:center;padding:32px;}
+.score-big{font-size:48px;font-weight:700;color:#4f46e5;margin:12px 0;}
+
+@media (max-width:768px){
+  body{padding:14px;}
+  .card{padding:16px;}
+  video, iframe.video-player{height:240px;}
+  h1{font-size:24px;}
+  .transcript-box{font-size:16px;padding:14px;}
+  .sentence-display{font-size:18px;padding:16px;}
+  .gap-input{width:100px;font-size:18px;}
+  .transcript-word{padding:4px 8px;}
+}
+</style>
+</head>
+<body>
+
+<div class="container" id="app">
+
+  <!-- Header row with Saved Exercises button -->
+  <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:10px;margin-bottom:4px;">
+    <div>
+      <h1 style="margin-bottom:4px;">🎧 Create an Exercise</h1>
+      <div class="sub">Upload a video. We'll do the rest.</div>
+    </div>
+    <button class="primary-blue" onclick="openSavedExercises()" style="white-space:nowrap;margin-top:6px;">
+      📚 Saved Exercises
+    </button>
+  </div>
+
+  <!-- Step 1 -->
+  <div class="card" id="step1Card">
+    <h2>1. Add your video</h2>
+    <div class="dropzone" id="dropzone">
+      <strong>Click or drag a video here</strong>
+      <div class="hint">MP4, MOV, MKV, WEBM, AVI</div>
+    </div>
+    <input type="file" id="fileInput" accept="video/*,.mp4,.mov,.mkv,.webm,.avi">
+
+    <div style="margin:16px 0;text-align:center;color:#999;font-size:13px;">— OR —</div>
+
+    <label>Paste a direct video link or Google Drive link</label>
+    <input type="text" id="videoUrl" placeholder="https://...mp4  or  https://drive.google.com/file/d/...">
+    <button class="primary-blue" onclick="usePastedLink()" id="pasteImportBtn">🔗 Use this link</button>
+    <div style="font-size:12px;color:#888;margin-top:6px;">
+      ⓘ For Google Drive links, the file must be shared as <b>"Anyone with the link can view"</b>.
+      Large files may take 1–3 minutes to import.
+    </div>
+
+    <div class="progress-wrap" id="progressWrap"><div class="progress-bar" id="progressBar">0%</div></div>
+    <div class="status" id="uploadStatus"></div>
+  </div>
+
+  <!-- Step 2 -->
+  <div class="card" id="step2Card" style="display:none;">
+    <h2>2. Your video</h2>
+    <div id="videoBox"></div>
+    <div class="status" id="transcribeStatus"></div>
+  </div>
+
+  <!-- Step 3 -->
+  <div class="card" id="step3Card" style="display:none;">
+    <h2>3. Generate Gaps</h2>
+    <div class="level-row">
+      <label for="levelSelect">Student level:</label>
+      <select id="levelSelect">
+        <option value="A1">A1 — Beginner</option>
+        <option value="A2">A2 — Elementary</option>
+        <option value="B1" selected>B1 — Intermediate</option>
+        <option value="B2">B2 — Upper Intermediate</option>
+        <option value="C1">C1 — Advanced</option>
+      </select>
+    </div>
+    <button class="success big full" onclick="makeItHappen()" id="makeBtn">✨ Generate Gaps</button>
+  </div>
+
+  <!-- Step 4 -->
+  <div class="card" id="step4Card" style="display:none;">
+    <h2>4. Edit Text</h2>
+    <div class="transcript-help">
+      💡 <b>Tap or click any word</b> to mark it as a gap. Tap a yellow word to remove the gap.
+    </div>
+    <button class="secondary" onclick="toggleEditMode()" id="editModeBtn" style="margin-bottom:12px;">✏️ Edit Text</button>
+    <div class="transcript-box" id="transcriptBox"></div>
+  </div>
+
+  <!-- Step 5 -->
+  <div class="card" id="step5Card" style="display:none;">
+    <h2>5. Share</h2>
+
+    <!-- Exercise name for saving -->
+    <div style="margin-bottom:14px;">
+      <label for="exerciseName">Exercise name (for your saved exercises)</label>
+      <input type="text" id="exerciseName" placeholder="e.g. Unit 3 — Shopping dialogue" style="margin-bottom:8px;">
+    </div>
+
+    <button class="primary-blue full" onclick="previewExercise()">👀 Preview</button>
+    <button class="success full" onclick="generateLink()">🔗 Generate Student Link</button>
+    <div class="status" id="link"></div>
+
+    <div style="margin-top:12px;border-top:1px solid #e5e7eb;padding-top:12px;">
+      <button class="secondary full" onclick="saveExerciseManually()" id="saveExBtn">💾 Save Exercise</button>
+      <div class="status" id="saveStatus"></div>
+    </div>
+  </div>
+</div>
+
+<!-- Help FAB -->
+<button class="help-fab" onclick="document.getElementById('helpOverlay').classList.add('show')" title="Help">❓</button>
+
+<!-- Help overlay -->
+<div class="help-overlay" id="helpOverlay" onclick="if(event.target===this)this.classList.remove('show')">
+  <div class="help-modal">
+    <button class="help-close" onclick="document.getElementById('helpOverlay').classList.remove('show')">×</button>
+    <h2>📖 How to Use</h2>
+    <p>Create a listening exercise in under 2 minutes.</p>
+    <h3>1. Upload a video</h3>
+    <p>Drag and drop or click. Any common format works.</p>
+    <h3>2. Wait for transcript</h3>
+    <p>The transcript appears automatically — no button to click.</p>
+    <h3>3. Edit gaps</h3>
+    <ul>
+      <li><b>Click any word</b> to make it a gap (turns yellow).</li>
+      <li><b>Click a yellow word</b> to remove the gap.</li>
+      <li><b>"✏️ Edit Text"</b> button — fix transcript mistakes. Your gaps are preserved.</li>
+    </ul>
+    <h3>4. Generate Gaps</h3>
+    <p>AI fills in extra gaps based on the level you choose.</p>
+    <h3>5. Share with students</h3>
+    <ul>
+      <li><b>Preview</b> — See what students will see.</li>
+      <li><b>Student Link</b> — Copy and send. No signup needed.</li>
+      <li><b>Save Exercise</b> — Saves to your Saved Exercises list on this browser.</li>
+    </ul>
+    <h3>Saved Exercises</h3>
+    <p>Click <b>📚 Saved Exercises</b> at any time to see all exercises you've created.
+    You can open them, copy student links, or delete them.</p>
+    <h3>How students use it</h3>
+    <ol>
+      <li>The video plays the first sentence automatically.</li>
+      <li>They type the missing words.</li>
+      <li>They click <b>✅ Submit</b> — green ✓ for correct, red ✗ for wrong.</li>
+      <li>The next sentence loads after 6 seconds.</li>
+      <li>At the end, they see their score.</li>
+    </ol>
+  </div>
+</div>
+
+<!-- Saved Exercises overlay -->
+<div class="saved-overlay" id="savedOverlay" onclick="if(event.target===this)closeSavedExercises()">
+  <div class="saved-modal">
+    <button class="help-close" onclick="closeSavedExercises()">×</button>
+    <h2>📚 Saved Exercises</h2>
+    <div id="savedList"><p style="color:#999;">Loading…</p></div>
+  </div>
+</div>
+
+<script>
+// ============================================================
+// 🌐 Global state
+// ============================================================
+const WORKER = window.WORKER_URL;
+
+// Teacher identity — persistent per browser
+function getTeacherId() {
+  let id = localStorage.getItem("teacherId");
+  if (!id) {
+    id = "t_" + Math.random().toString(36).slice(2, 11) + Date.now().toString(36);
+    localStorage.setItem("teacherId", id);
+  }
+  return id;
+}
+const TEACHER_ID = getTeacherId();
+
+// Video state
+let videoMode = null;
+let bunnyGuid = null;
+let bunnyDirectUrl = null;
+let bunnyEmbedUrl = null;
+let externalVideoUrl = null;
+let builderPlayer = null;
+
+// Transcript state
+let sentences = [];
+let editModeActive = false;
+
+// Current exercise tracking (for auto-save after link generation)
+let currentExerciseId = null;
+
+// ============================================================
+// 🎬 VIDEO HANDLING
+// ============================================================
+const dropzone = document.getElementById("dropzone");
+const fileInput = document.getElementById("fileInput");
+
+if (dropzone) {
+  dropzone.onclick = () => fileInput.click();
+  dropzone.ondragover = e => { e.preventDefault(); dropzone.classList.add("dragover"); };
+  dropzone.ondragleave = () => dropzone.classList.remove("dragover");
+  dropzone.ondrop = e => {
+    e.preventDefault();
+    dropzone.classList.remove("dragover");
+    if (e.dataTransfer.files[0]) handleFileUpload(e.dataTransfer.files[0]);
+  };
+  fileInput.onchange = () => {
+    if (fileInput.files[0]) handleFileUpload(fileInput.files[0]);
+  };
+}
+
+async function handleFileUpload(file) {
+  const status = document.getElementById("uploadStatus");
+  const progressWrap = document.getElementById("progressWrap");
+  const progressBar = document.getElementById("progressBar");
+
+  // Reset exercise tracking for new upload
+  currentExerciseId = null;
+
+  status.className = "status";
+  status.innerText = "⏳ Creating upload...";
+  progressWrap.style.display = "block";
+  progressBar.style.width = "0%";
+  progressBar.innerText = "0%";
+
+  try {
+    const createRes = await fetch(WORKER + "/create-bunny-video", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ title: file.name })
+    });
+    if (!createRes.ok) {
+      const errBody = await createRes.text();
+      throw new Error("Create failed: " + createRes.status + " " + errBody);
+    }
+    const created = await createRes.json();
+    bunnyGuid = created.guid;
+
+    // Pre-fill exercise name from filename if not already set
+    const nameInput = document.getElementById("exerciseName");
+    if (nameInput && !nameInput.value.trim()) {
+      nameInput.value = file.name.replace(/\.[^.]+$/, "");
+    }
+
+    status.innerText = "⏳ Uploading " + file.name + "...";
+    await new Promise((resolve, reject) => {
+      const xhr = new XMLHttpRequest();
+      xhr.open("PUT", WORKER + "/upload-bunny-chunk?guid=" + bunnyGuid);
+      xhr.upload.onprogress = e => {
+        if (e.lengthComputable) {
+          const pct = Math.round((e.loaded / e.total) * 100);
+          progressBar.style.width = pct + "%";
+          progressBar.innerText = pct + "%";
+        }
+      };
+      xhr.onload = () => {
+        if (xhr.status >= 200 && xhr.status < 300) resolve();
+        else reject(new Error("Upload failed: " + xhr.status + " " + xhr.responseText));
+      };
+      xhr.onerror = () => reject(new Error("Network error"));
+      xhr.send(file);
+    });
+
+    bunnyEmbedUrl = "https://iframe.mediadelivery.net/embed/" + created.libraryId + "/" + bunnyGuid;
+    videoMode = "bunny";
+
+    progressBar.style.width = "100%";
+    progressBar.innerText = "Done";
+    status.className = "status success";
+    status.innerText = "✅ Uploaded! Processing video & transcribing...";
+
+    showVideoPlayer();
+    revealStep("step2Card");
+
+    await waitForBunnyReady();
+    await autoTranscribe();
+
+  } catch (err) {
+    console.error(err);
+    status.className = "status error";
+    status.innerText = "❌ " + err.message;
+    progressWrap.style.display = "none";
+  }
+}
+
+async function waitForBunnyReady() {
+  const status = document.getElementById("transcribeStatus");
+  status.className = "status";
+  status.innerText = "⏳ Waiting for video to be ready...";
+  for (let i = 0; i < 150; i++) {
+    await new Promise(r => setTimeout(r, 2000));
+    try {
+      const res = await fetch(WORKER + "/bunny-status?guid=" + bunnyGuid);
+      const data = await res.json();
+      if (data.failed) throw new Error("Bunny encoding failed. Check MP4 Fallback is enabled in your Bunny library.");
+      if (data.done && data.cdnUrl) {
+        bunnyDirectUrl = data.cdnUrl;
+        const box = document.getElementById("videoBox");
+        box.innerHTML = '<video id="builderPlayer" class="video-player" controls crossorigin="anonymous"><source src="' +
+          bunnyDirectUrl + '" type="video/mp4"></video>';
+        builderPlayer = document.getElementById("builderPlayer");
+        return;
+      }
+      status.innerText = "⏳ Video processing... (" + (data.encodeProgress || 0) + "%)";
+    } catch (e) {
+      if (e.message && e.message.indexOf("encoding failed") >= 0) throw e;
+    }
+  }
+  throw new Error("Video took too long to process");
+}
+
+// ============================================================
+// 🔗 SMART LINK ROUTER
+// ============================================================
+function usePastedLink() {
+  const url = document.getElementById("videoUrl").value.trim();
+  if (!url) { alert("Please paste a video link first."); return; }
+  currentExerciseId = null;
+  if (url.includes("drive.google.com")) {
+    let driveInput = document.getElementById("driveUrl");
+    if (!driveInput) {
+      driveInput = document.createElement("input");
+      driveInput.id = "driveUrl";
+      driveInput.style.display = "none";
+      document.body.appendChild(driveInput);
+    }
+    driveInput.value = url;
+    useGoogleDriveLink();
+  } else {
+    useVideoLink();
+  }
+}
+
+function useVideoLink() {
+  const url = document.getElementById("videoUrl").value.trim();
+  if (!url) { alert("Please paste a video link."); return; }
+  if (url.includes("youtube.com") || url.includes("youtu.be")) {
+    alert("YouTube links cannot be auto-transcribed. Please upload a video file instead.");
+    return;
+  }
+  externalVideoUrl = url;
+  videoMode = "mp4";
+  bunnyGuid = null;
+  bunnyDirectUrl = null;
+
+  document.getElementById("uploadStatus").className = "status success";
+  document.getElementById("uploadStatus").innerText = "✅ Link loaded.";
+
+  showVideoPlayer();
+  revealStep("step2Card");
+  autoTranscribe();
+}
+
+// ============================================================
+// ☁️ GOOGLE DRIVE IMPORT
+// ============================================================
+async function useGoogleDriveLink() {
+  const rawUrl = document.getElementById("driveUrl").value.trim();
+  if (!rawUrl) { alert("Please paste a Google Drive link."); return; }
+  if (!rawUrl.includes("drive.google.com")) {
+    alert("That doesn't look like a Google Drive link.");
+    return;
+  }
+
+  const status = document.getElementById("uploadStatus");
+  const progressWrap = document.getElementById("progressWrap");
+  const progressBar = document.getElementById("progressBar");
+  const btn = document.getElementById("pasteImportBtn");
+
+  status.className = "status";
+  status.innerText = "☁️ Importing from Google Drive… (large files may take 1–3 minutes)";
+  progressWrap.style.display = "block";
+  progressBar.style.width = "30%";
+  progressBar.innerText = "Importing…";
+  if (btn) btn.disabled = true;
+
+  let fakePct = 30;
+  const fakeTimer = setInterval(() => {
+    if (fakePct < 85) { fakePct += 3; progressBar.style.width = fakePct + "%"; }
+  }, 2000);
+
+  try {
+    const res = await fetch(WORKER + "/gdrive-to-bunny", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ driveUrl: rawUrl, title: "Google Drive import" })
+    });
+
+    if (!res.ok) {
+      const errBody = await res.text().catch(() => res.status);
+      let msg = "Import failed: " + errBody;
+      try { msg = "Import failed: " + JSON.parse(errBody).error; } catch {}
+      throw new Error(msg);
+    }
+
+    const data = await res.json();
+    bunnyGuid = data.guid;
+    bunnyEmbedUrl = "https://iframe.mediadelivery.net/embed/" + data.libraryId + "/" + bunnyGuid;
+    videoMode = "bunny";
+
+    clearInterval(fakeTimer);
+    progressBar.style.width = "100%";
+    progressBar.innerText = "Done";
+    status.className = "status success";
+    status.innerText = "✅ Imported from Google Drive! Processing & transcribing…";
+
+    revealStep("step2Card");
+    await waitForBunnyReady();
+    await autoTranscribe();
+
+  } catch (err) {
+    clearInterval(fakeTimer);
+    console.error(err);
+    status.className = "status error";
+    status.innerText = "❌ " + err.message;
+    progressWrap.style.display = "none";
+    if (btn) btn.disabled = false;
+  }
+}
+
+function showVideoPlayer() {
+  const box = document.getElementById("videoBox");
+  if (videoMode === "mp4") {
+    box.innerHTML = '<video id="builderPlayer" class="video-player" controls><source src="' +
+      escapeAttr(externalVideoUrl) + '"></video>';
+    builderPlayer = document.getElementById("builderPlayer");
+  } else if (videoMode === "bunny") {
+    box.innerHTML = '<iframe id="builderPlayer" class="video-player" src="' + bunnyEmbedUrl +
+      '?autoplay=false" allowfullscreen allow="autoplay;encrypted-media"></iframe>';
+  }
+}
+
+function revealStep(id) { document.getElementById(id).style.display = "block"; }
+
+function escapeAttr(s) {
+  return String(s).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+}
+function escapeHtml(s) { return escapeAttr(s); }
+</script>
+
+<script>
+// ============================================================
+// 📝 AUTO-TRANSCRIBE
+// ============================================================
+async function autoTranscribe() {
+  const status = document.getElementById("transcribeStatus");
+  let audioUrl;
+  if (videoMode === "bunny") audioUrl = bunnyDirectUrl;
+  else if (videoMode === "mp4") audioUrl = externalVideoUrl;
+  else return;
+
+  status.className = "status";
+  status.innerText = "🎙️ Transcribing... (30-90 seconds)";
+
+  try {
+    const res = await fetch(WORKER + "/transcribe", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ audioUrl })
+    });
+    if (!res.ok) {
+      const errBody = await res.text();
+      throw new Error("Transcribe failed: " + res.status + " " + errBody);
+    }
+    const data = await res.json();
+    if (data.pending && data.jobId) {
+      status.innerText = "⏳ Transcribing — checking every few seconds...";
+      await pollTranscriptJob(data.jobId);
+    } else {
+      buildSentencesFromTranscript(data);
+    }
+  } catch (err) {
+    console.error(err);
+    status.className = "status error";
+    status.innerText = "❌ " + err.message;
+  }
+}
+
+async function pollTranscriptJob(jobId) {
+  const status = document.getElementById("transcribeStatus");
+  for (let i = 0; i < 90; i++) {
+    await new Promise(r => setTimeout(r, 2000));
+    try {
+      const res = await fetch(WORKER + "/transcribe-status?jobId=" + jobId);
+      const data = await res.json();
+      if (data.done) { buildSentencesFromTranscript(data); return; }
+      status.innerText = "⏳ Transcribing... (" + ((i + 1) * 2) + "s)";
+    } catch {}
+  }
+  status.className = "status error";
+  status.innerText = "❌ Transcription timed out.";
+}
+
+// ============================================================
+// 🧩 SENTENCE PARSER
+// ============================================================
+function splitIntoSentences(text) {
+  const abbrevs = ["mr","mrs","ms","dr","st","jr","sr","vs","etc","e.g","i.e"];
+  const out = [];
+  let buffer = "";
+  for (let i = 0; i < text.length; i++) {
+    buffer += text[i];
+    if (/[.!?]/.test(text[i])) {
+      const lower = buffer.trim().toLowerCase();
+      const lastWord = lower.split(/\s+/).pop().replace(/[.!?]$/, "");
+      const isAbbrev = abbrevs.indexOf(lastWord) >= 0;
+      const next = text[i + 1];
+      if (!isAbbrev && (next === " " || next === "\n" || i === text.length - 1 || next === undefined)) {
+        if (buffer.trim()) out.push(buffer.trim());
+        buffer = "";
+      }
+    }
+  }
+  if (buffer.trim()) out.push(buffer.trim());
+  return out;
+}
+
+// ============================================================
+// 🔀 GROUP SENTENCES
+// ============================================================
+function groupSentencesForStudent(rawSentences) {
+  const groups = [];
+  let pending = [];
+  const SHORT_SENTENCE_WORDS = 3;
+  const LONG_SENTENCE_WORDS = 8;
+
+  function flushPending() {
+    if (!pending.length) return;
+    const allWords = [];
+    pending.forEach(p => p.words.forEach(w => allWords.push(w)));
+    groups.push({ words: allWords, startTime: pending[0].startTime, endTime: pending[pending.length - 1].endTime });
+    pending = [];
+  }
+
+  for (let i = 0; i < rawSentences.length; i++) {
+    const s = rawSentences[i];
+    const wordCount = s.words.length;
+    const isShort = wordCount <= SHORT_SENTENCE_WORDS;
+    const isLong = wordCount >= LONG_SENTENCE_WORDS;
+
+    if (isShort) { pending.push(s); continue; }
+    if (isLong) {
+      flushPending();
+      groups.push({ words: [...s.words], startTime: s.startTime, endTime: s.endTime });
+      continue;
+    }
+    if (pending.length > 0) {
+      const allWords = [];
+      pending.forEach(p => p.words.forEach(w => allWords.push(w)));
+      s.words.forEach(w => allWords.push(w));
+      groups.push({ words: allWords, startTime: pending[0].startTime, endTime: s.endTime });
+      pending = [];
+    } else {
+      groups.push({ words: [...s.words], startTime: s.startTime, endTime: s.endTime });
+    }
+  }
+  flushPending();
+
+  const cleanedGroups = [];
+  for (let i = 0; i < groups.length; i++) {
+    const current = groups[i];
+    const hasGap = current.words.some(w => w.isGap);
+    if (hasGap) { cleanedGroups.push(current); continue; }
+    if (i < groups.length - 1) {
+      const next = groups[i + 1];
+      next.words = [...current.words, ...next.words];
+      next.startTime = current.startTime;
+    } else {
+      if (cleanedGroups.length > 0) {
+        const prev = cleanedGroups[cleanedGroups.length - 1];
+        prev.words.push(...current.words);
+        prev.endTime = current.endTime;
+      } else {
+        cleanedGroups.push(current);
+      }
+    }
+  }
+  return cleanedGroups;
+}
+
+function buildSentencesFromTranscript(data) {
+  const status = document.getElementById("transcribeStatus");
+  const text = data.text || "";
+  const words = data.words || [];
+
+  if (!text.trim()) {
+    status.className = "status error";
+    status.innerText = "❌ Empty transcript.";
+    return;
+  }
+
+  const rawSentences = splitIntoSentences(text);
+  let wordIdx = 0;
+  sentences = rawSentences.map(rawText => {
+    const tokens = rawText.split(/\s+/).filter(Boolean);
+    const sentenceWords = [];
+    let sentStart = null, sentEnd = null;
+
+    tokens.forEach(token => {
+      const cleanToken = token.toLowerCase().replace(/[^\w']/g, "");
+      let matchedTime = null;
+      for (let j = wordIdx; j < Math.min(wordIdx + 5, words.length); j++) {
+        const w = words[j];
+        const cleanW = (w.text || "").toLowerCase().replace(/[^\w']/g, "");
+        if (cleanW === cleanToken && cleanToken.length > 0) {
+          matchedTime = w.start / 1000;
+          if (sentStart === null) sentStart = matchedTime;
+          sentEnd = (w.end || w.start) / 1000;
+          wordIdx = j + 1;
+          break;
+        }
+      }
+      sentenceWords.push({ text: token, time: matchedTime !== null ? matchedTime : (sentEnd || 0), isGap: false });
+    });
+
+    return { words: sentenceWords, startTime: sentStart || 0, endTime: sentEnd || (sentStart || 0) + 5, originalText: rawText };
+  });
+
+  sentences.forEach((s, i) => {
+    if (i < sentences.length - 1) s.endTime = Math.max(s.endTime, sentences[i + 1].startTime - 0.1);
+    else s.endTime = s.endTime + 1.5;
+  });
+
+  status.className = "status success";
+  status.innerText = "✅ Transcript ready (" + sentences.length + " sentences).";
+
+  renderTranscript();
+  revealStep("step3Card");
+  revealStep("step4Card");
+  revealStep("step5Card");
+}
+
+// ============================================================
+// ✏️ INLINE EDIT TEXT MODE
+// ============================================================
+function toggleEditMode() {
+  editModeActive = !editModeActive;
+  const btn = document.getElementById("editModeBtn");
+  if (editModeActive) {
+    btn.innerText = "❌ Cancel Edit";
+    btn.className = "danger";
+    renderTranscriptEditMode();
+  } else {
+    cancelTranscriptEdit();
+  }
+}
+
+function renderTranscriptEditMode() {
+  const box = document.getElementById("transcriptBox");
+  box.classList.add("edit-mode");
+
+  let html = '<div style="background:#fefce8;border-left:4px solid #f59e0b;padding:10px 14px;' +
+    'border-radius:6px;margin-bottom:14px;font-size:13px;color:#92400e;">' +
+    '✏️ <b>Gap preview shown above each sentence.</b> Highlighted words are current gaps. ' +
+    'Edit the text below — gaps will be re-applied to matching words after you save.</div>';
+
+  sentences.forEach((s, si) => {
+    const hasGaps = s.words.some(w => w.isGap);
+    html += '<div class="sentence-edit-row">';
+
+    if (hasGaps) {
+      const previewHtml = s.words.map(w => {
+        if (w.isGap) {
+          return '<span style="background:#fde68a;color:#78350f;font-weight:700;padding:1px 6px;border-radius:4px;margin:0 1px;">' + escapeHtml(w.text) + '</span>';
+        }
+        return '<span style="margin:0 1px;">' + escapeHtml(w.text) + '</span>';
+      }).join(' ');
+
+      html += '<div style="font-size:13px;padding:5px 10px;margin-bottom:3px;background:#fffbeb;' +
+        'border:1px solid #fde68a;border-radius:6px;line-height:1.7;color:#374151;">' +
+        '<span style="font-size:11px;font-weight:700;color:#b45309;text-transform:uppercase;' +
+        'letter-spacing:0.05em;margin-right:6px;">Gaps:</span>' + previewHtml + '</div>';
+    }
+
+    html += '<textarea class="sentence-edit-textarea" data-sent="' + si + '" oninput="autoResizeTextarea(this)">' +
+      escapeHtml(s.originalText) + '</textarea></div>';
+  });
+
+  html += '<div class="transcript-edit-header" style="margin-top:18px;border-top:1px solid #e5e7eb;padding-top:14px;border-bottom:none;">' +
+    '<button class="success" onclick="applyTranscriptEdit()">✅ Apply Changes</button>' +
+    '<button class="danger" onclick="cancelTranscriptEdit()">❌ Cancel</button>' +
+    '<span style="font-size:13px;color:#6b7280;align-self:center;">Edit the text below. Gaps will be re-applied to matching words.</span></div>';
+
+  box.innerHTML = html;
+  setTimeout(() => { box.querySelectorAll(".sentence-edit-textarea").forEach(ta => autoResizeTextarea(ta)); }, 0);
+}
+
+function autoResizeTextarea(ta) {
+  ta.style.height = "auto";
+  ta.style.height = (ta.scrollHeight + 2) + "px";
+}
+
+function applyTranscriptEdit() {
+  const box = document.getElementById("transcriptBox");
+  const textareas = box.querySelectorAll(".sentence-edit-textarea");
+  if (!textareas.length) return;
+
+  const newText = Array.from(textareas).map(ta => ta.value.trim()).filter(Boolean).join(" ");
+  if (!newText) { alert("Transcript cannot be empty."); return; }
+
+  const existingGapCounts = {};
+  sentences.forEach(sentence => {
+    sentence.words.forEach(word => {
+      if (word.isGap) {
+        const clean = word.text.toLowerCase().replace(/[^\w']/g, "");
+        if (clean) existingGapCounts[clean] = (existingGapCounts[clean] || 0) + 1;
+      }
+    });
+  });
+
+  const rawSentences = splitIntoSentences(newText);
+  const oldSentences = sentences;
+
+  sentences = rawSentences.map((rawText, idx) => {
+    const tokens = rawText.split(/\s+/).filter(Boolean);
+    const sentenceWords = tokens.map(token => {
+      const clean = token.toLowerCase().replace(/[^\w']/g, "");
+      let shouldBeGap = false;
+      if (clean && existingGapCounts[clean] && existingGapCounts[clean] > 0) {
+        shouldBeGap = true;
+        existingGapCounts[clean]--;
+      }
+      return { text: token, time: 0, isGap: shouldBeGap };
+    });
+    const oldSent = oldSentences[idx];
+    return {
+      words: sentenceWords,
+      startTime: oldSent ? oldSent.startTime : (idx * 5),
+      endTime: oldSent ? oldSent.endTime : ((idx + 1) * 5),
+      originalText: rawText
+    };
+  });
+
+  editModeActive = false;
+  const btn = document.getElementById("editModeBtn");
+  btn.innerText = "✏️ Edit Text";
+  btn.className = "secondary";
+  box.classList.remove("edit-mode");
+  renderTranscript();
+}
+
+function cancelTranscriptEdit() {
+  editModeActive = false;
+  const btn = document.getElementById("editModeBtn");
+  if (btn) { btn.innerText = "✏️ Edit Text"; btn.className = "secondary"; }
+  const box = document.getElementById("transcriptBox");
+  if (box) box.classList.remove("edit-mode");
+  renderTranscript();
+}
+
+// ============================================================
+// 📝 TRANSCRIPT RENDER & CLICK-TO-TOGGLE GAPS
+// ============================================================
+function renderTranscript() {
+  const box = document.getElementById("transcriptBox");
+  if (!sentences.length) { box.innerHTML = "<i>No transcript.</i>"; return; }
+  box.innerHTML = sentences.map((s, si) => {
+    const wordsHtml = s.words.map((w, wi) => {
+      const cls = "transcript-word" + (w.isGap ? " gap" : "");
+      return '<span class="' + cls + '" data-sent="' + si + '" data-word="' + wi + '">' + escapeHtml(w.text) + '</span>';
+    }).join(" ");
+    return '<div class="transcript-sentence">' + wordsHtml + '</div>';
+  }).join("");
+}
+
+document.addEventListener("click", function (e) {
+  if (editModeActive) return;
+  const target = e.target;
+  if (!target.classList || !target.classList.contains("transcript-word")) return;
+  const sentIdx = parseInt(target.getAttribute("data-sent"));
+  const wordIdx = parseInt(target.getAttribute("data-word"));
+  if (isNaN(sentIdx) || isNaN(wordIdx)) return;
+  const word = sentences[sentIdx] && sentences[sentIdx].words[wordIdx];
+  if (!word) return;
+  const clean = word.text.replace(/[^\w']/g, "");
+  if (!clean) return;
+  word.isGap = !word.isGap;
+  target.classList.toggle("gap");
+});
+
+// ============================================================
+// ✨ MAKE IT HAPPEN — AI gap suggestion
+// ============================================================
+async function makeItHappen() {
+  if (!sentences.length) { alert("No transcript yet."); return; }
+  const level = document.getElementById("levelSelect").value;
+  const btn = document.getElementById("makeBtn");
+  btn.disabled = true;
+  btn.innerText = "⏳ Working magic...";
+  const transcript = sentences.map(s => s.originalText).join(" ");
+
+  try {
+    const res = await fetch(WORKER + "/generate-gaps", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ transcript, level })
+    });
+    if (!res.ok) {
+      const errBody = await res.text();
+      throw new Error("AI error: " + res.status + " " + errBody);
+    }
+    const data = await res.json();
+    if (!data.sections || !Array.isArray(data.sections)) throw new Error("Invalid AI response");
+    applyAISuggestedGaps(data.sections);
+    document.getElementById("step3Card").scrollIntoView({ behavior: "smooth" });
+
+    // Auto-save after AI generates gaps
+    autoSaveExercise();
+
+  } catch (err) {
+    console.error(err);
+    alert("❌ " + err.message);
+  } finally {
+    btn.innerText = "✨ Generate Gaps";
+    btn.disabled = false;
+  }
+}
+
+function applyAISuggestedGaps(aiSections) {
+  const targets = [];
+  aiSections.forEach(sec => {
+    (sec.answers || []).forEach(a => {
+      const cleaned = (a || "").toLowerCase().replace(/[^\w']/g, "");
+      if (cleaned) targets.push(cleaned);
+    });
+  });
+  targets.forEach(target => {
+    for (const sentence of sentences) {
+      let found = false;
+      for (const word of sentence.words) {
+        const cleanW = word.text.toLowerCase().replace(/[^\w']/g, "");
+        if (cleanW === target && !word.isGap) { word.isGap = true; found = true; break; }
+      }
+      if (found) break;
+    }
+  });
+  renderTranscript();
+}
+
+// ============================================================
+// 📦 BUILD LESSON & SHARE
+// ============================================================
+function buildLesson() {
+  const lessonSentences = sentences
+    .map(s => ({
+      words: s.words.map(w => ({ text: w.text, isGap: w.isGap })),
+      startTime: s.startTime,
+      endTime: s.endTime
+    }))
+    .filter(s => s.words.length > 0);
+
+  let videoUrl = "";
+  if (videoMode === "bunny" && bunnyDirectUrl) videoUrl = bunnyDirectUrl;
+  else if (videoMode === "mp4") videoUrl = externalVideoUrl;
+
+  return { videoUrl, sentences: lessonSentences };
+}
+
+function previewExercise() {
+  const lesson = buildLesson();
+  if (!lesson.videoUrl) { alert("Add a video first."); return; }
+  const hasGaps = lesson.sentences.some(s => s.words.some(w => w.isGap));
+  if (!hasGaps) { alert("No gaps yet. Click words or use Generate Gaps first."); return; }
+  startStudent(lesson, true);
+}
+
+async function generateLink() {
+  const lesson = buildLesson();
+  if (!lesson.videoUrl) { alert("Add a video first."); return; }
+  const hasGaps = lesson.sentences.some(s => s.words.some(w => w.isGap));
+  if (!hasGaps) { alert("No gaps yet. Click words or use Generate Gaps first."); return; }
+
+  const slim = {
+    videoUrl: lesson.videoUrl,
+    sentences: lesson.sentences.map(s => ({
+      words: s.words.map(w => w.isGap ? { t: w.text, g: 1 } : { t: w.text }),
+      s: Math.round(s.startTime * 100) / 100,
+      e: Math.round(s.endTime * 100) / 100
+    }))
+  };
+
+  const linkBox = document.getElementById("link");
+  linkBox.className = "status";
+  linkBox.innerHTML = "⏳ Saving lesson…";
+
+  try {
+    const res = await fetch(WORKER + "/save-lesson", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(slim)
+    });
+    const data = await res.json();
+    if (!res.ok || !data.id) throw new Error(data.error || "Save failed");
+
+    const link = location.origin + location.pathname + "?id=" + data.id;
+    linkBox.className = "status success";
+    linkBox.innerHTML =
+      '<b>✅ Student Link:</b> <code style="font-size:1.1em;letter-spacing:1px;">' + data.id + '</code><br>' +
+      '<a href="' + link + '" target="_blank" style="word-break:break-all;">' + link + '</a>' +
+      '<br><button class="primary-blue" style="margin-top:8px;" onclick="copyLink()">📋 Copy Link</button>';
+    window._lastLink = link;
+    window._lastLessonId = data.id;
+
+    // Auto-save exercise with the student link ID attached
+    autoSaveExercise(data.id);
+
+  } catch (e) {
+    linkBox.className = "status error";
+    linkBox.innerHTML = "❌ Could not save lesson: " + e.message;
+  }
+}
+
+function copyLink() {
+  navigator.clipboard.writeText(window._lastLink || "").then(() => alert("Link copied!"));
+}
+
+// ============================================================
+// 💾 SAVE EXERCISE — teacher's saved exercises in KV
+// ============================================================
+function buildExercisePayload(lessonId) {
+  const lesson = buildLesson();
+  const name = (document.getElementById("exerciseName").value.trim()) ||
+    "Exercise " + new Date().toLocaleDateString();
+
+  return {
+    teacherId: TEACHER_ID,
+    exerciseId: currentExerciseId || null,
+    name: name,
+    createdAt: new Date().toISOString(),
+    lessonId: lessonId || window._lastLessonId || null,
+    videoUrl: lesson.videoUrl,
+    sentences: lesson.sentences.map(s => ({
+      words: s.words.map(w => w.isGap ? { t: w.text, g: 1 } : { t: w.text }),
+      s: Math.round(s.startTime * 100) / 100,
+      e: Math.round(s.endTime * 100) / 100
+    }))
+  };
+}
+
+async function autoSaveExercise(lessonId) {
+  if (!sentences.length) return;
+  try {
+    const payload = buildExercisePayload(lessonId);
+    const res = await fetch(WORKER + "/save-teacher-exercise", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload)
+    });
+    const data = await res.json();
+    if (res.ok && data.exerciseId) {
+      currentExerciseId = data.exerciseId;
+    }
+  } catch (e) {
+    console.warn("Auto-save failed silently:", e);
+  }
+}
+
+async function saveExerciseManually() {
+  if (!sentences.length) { alert("Nothing to save yet."); return; }
+  const btn = document.getElementById("saveExBtn");
+  const saveStatus = document.getElementById("saveStatus");
+  btn.disabled = true;
+  btn.innerText = "💾 Saving…";
+  saveStatus.className = "status";
+  saveStatus.innerText = "Saving…";
+
+  try {
+    const payload = buildExercisePayload();
+    const res = await fetch(WORKER + "/save-teacher-exercise", {
+      method: "POST",
+      headers: { "Content-Type":
+                    const res = await fetch(WORKER + "/save-teacher-exercise", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload)
+    });
+    const data = await res.json();
+    if (!res.ok || !data.exerciseId) throw new Error(data.error || "Save failed");
+    currentExerciseId = data.exerciseId;
+    saveStatus.className = "status success";
+    saveStatus.innerText = "✅ Exercise saved!";
+  } catch (e) {
+    saveStatus.className = "status error";
+    saveStatus.innerText = "❌ Could not save: " + e.message;
+  } finally {
+    btn.disabled = false;
+    btn.innerText = "💾 Save Exercise";
+  }
+}
+
+// ============================================================
+// 📚 SAVED EXERCISES PANEL
+// ============================================================
+async function openSavedExercises() {
+  const overlay = document.getElementById("savedOverlay");
+  const list = document.getElementById("savedList");
+  overlay.classList.add("show");
+  list.innerHTML = '<p style="color:#999;">Loading…</p>';
+
+  try {
+    const res = await fetch(WORKER + "/list-teacher-exercises?teacherId=" + encodeURIComponent(TEACHER_ID));
+    if (!res.ok) throw new Error("Could not load exercises");
+    const data = await res.json();
+    const exercises = data.exercises || [];
+
+    if (!exercises.length) {
+      list.innerHTML = '<p style="color:#999;text-align:center;padding:24px;">No saved exercises yet.<br>' +
+        'Create an exercise and click <b>💾 Save Exercise</b>.</p>';
+      return;
+    }
+
+    list.innerHTML = exercises.map(ex => {
+      const date = ex.createdAt ? new Date(ex.createdAt).toLocaleDateString(undefined, {
+        day: "numeric", month: "short", year: "numeric"
+      }) : "Unknown date";
+      const gapCount = ex.sentences
+        ? ex.sentences.reduce((n, s) => n + (s.words || []).filter(w => w.g).length, 0)
+        : 0;
+      const sentCount = ex.sentences ? ex.sentences.length : 0;
+      const studentLink = ex.lessonId
+        ? location.origin + location.pathname + "?id=" + ex.lessonId
+        : null;
+
+      return '<div class="exercise-item">' +
+        '<div class="exercise-item-title">' + escapeHtml(ex.name || "Untitled") +
+          (ex.lessonId ? '<span class="autosave-badge">🔗 Link ready</span>' : '') +
+        '</div>' +
+        '<div class="exercise-item-meta">' +
+          '📅 ' + date + ' &nbsp;·&nbsp; ' +
+          '📝 ' + sentCount + ' sentence' + (sentCount !== 1 ? 's' : '') + ' &nbsp;·&nbsp; ' +
+          '🔵 ' + gapCount + ' gap' + (gapCount !== 1 ? 's' : '') +
+        '</div>' +
+        '<div class="exercise-item-actions">' +
+          '<button class="primary-blue" onclick="openSavedExercise(' + "'" + ex.exerciseId + "'" + ')">✏️ Open & Edit</button>' +
+          (studentLink
+            ? '<button class="success" onclick="copySavedLink(' + "'" + escapeAttr(studentLink) + "'" + ')">📋 Copy Student Link</button>'
+            : '<button class="secondary" onclick="generateLinkForSaved(' + "'" + ex.exerciseId + "'" + ')">🔗 Generate Link</button>'
+          ) +
+          '<button class="danger" onclick="deleteSavedExercise(' + "'" + ex.exerciseId + "'" + ')">🗑 Delete</button>' +
+        '</div>' +
+      '</div>';
+    }).join("");
+
+  } catch (e) {
+    list.innerHTML = '<p style="color:#991b1b;">❌ ' + e.message + '</p>';
+  }
+}
+
+function closeSavedExercises() {
+  document.getElementById("savedOverlay").classList.remove("show");
+}
+
+async function openSavedExercise(exerciseId) {
+  const list = document.getElementById("savedList");
+  list.innerHTML = '<p style="color:#999;">Loading exercise…</p>';
+
+  try {
+    const res = await fetch(WORKER + "/load-teacher-exercise?teacherId=" +
+      encodeURIComponent(TEACHER_ID) + "&exerciseId=" + encodeURIComponent(exerciseId));
+    if (!res.ok) throw new Error("Could not load exercise");
+    const ex = await res.json();
+
+    closeSavedExercises();
+
+    // Restore state
+    currentExerciseId = ex.exerciseId;
+    window._lastLessonId = ex.lessonId || null;
+
+    // Restore video
+    if (ex.videoUrl) {
+      externalVideoUrl = ex.videoUrl;
+      videoMode = "mp4";
+      bunnyGuid = null;
+      bunnyDirectUrl = ex.videoUrl;
+    }
+
+    // Restore exercise name
+    const nameInput = document.getElementById("exerciseName");
+    if (nameInput) nameInput.value = ex.name || "";
+
+    // Restore sentences from slim format
+    const raw = {
+      videoUrl: ex.videoUrl,
+      sentences: ex.sentences
+    };
+    const normalised = normalizeLesson(raw);
+
+    sentences = normalised.sentences.map((s, idx) => ({
+      words: s.words.map(w => ({ text: w.text, isGap: !!w.isGap, time: 0 })),
+      startTime: s.startTime || 0,
+      endTime: s.endTime || 0,
+      originalText: s.words.map(w => w.text).join(" ")
+    }));
+
+    // Show the video player
+    const box = document.getElementById("videoBox");
+    box.innerHTML = '<video id="builderPlayer" class="video-player" controls>' +
+      '<source src="' + escapeAttr(ex.videoUrl) + '"></video>';
+    builderPlayer = document.getElementById("builderPlayer");
+
+    // Reveal all steps
+    revealStep("step2Card");
+    revealStep("step3Card");
+    revealStep("step4Card");
+    revealStep("step5Card");
+
+    renderTranscript();
+
+    // If there's an existing student link, restore it
+    if (ex.lessonId) {
+      const link = location.origin + location.pathname + "?id=" + ex.lessonId;
+      const linkBox = document.getElementById("link");
+      linkBox.className = "status success";
+      linkBox.innerHTML =
+        '<b>✅ Student Link:</b> <code style="font-size:1.1em;letter-spacing:1px;">' + ex.lessonId + '</code><br>' +
+        '<a href="' + link + '" target="_blank" style="word-break:break-all;">' + link + '</a>' +
+        '<br><button class="primary-blue" style="margin-top:8px;" onclick="copyLink()">📋 Copy Link</button>';
+      window._lastLink = link;
+    }
+
+    document.getElementById("step2Card").scrollIntoView({ behavior: "smooth" });
+
+    const saveStatus = document.getElementById("saveStatus");
+    if (saveStatus) {
+      saveStatus.className = "status success";
+      saveStatus.innerText = "✅ Exercise loaded. Make changes and save again to update.";
+    }
+
+  } catch (e) {
+    list.innerHTML = '<p style="color:#991b1b;">❌ ' + e.message + '</p>';
+  }
+}
+
+function copySavedLink(link) {
+  navigator.clipboard.writeText(link).then(() => alert("Student link copied!"));
+}
+
+async function generateLinkForSaved(exerciseId) {
+  closeSavedExercises();
+  await openSavedExercise(exerciseId);
+  await generateLink();
+}
+
+async function deleteSavedExercise(exerciseId) {
+  if (!confirm("Delete this exercise? This cannot be undone.")) return;
+  try {
+    const res = await fetch(WORKER + "/delete-teacher-exercise", {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ teacherId: TEACHER_ID, exerciseId })
+    });
+    if (!res.ok) throw new Error("Delete failed");
+    openSavedExercises(); // refresh list
+  } catch (e) {
+    alert("❌ Could not delete: " + e.message);
+  }
+}
+
+// ============================================================
+// 🧑‍🎓 STUDENT VIEW
+// ============================================================
+let studentState = {
+  lesson: null, currentIdx: 0, videoEl: null, stopTimer: null,
+  answers: {}, results: {}, submittedSentences: {}, finished: false,
+  isPreview: false, autoAdvanceTimer: null, autoAdvanceCountInterval: null
+};
+
+function startStudent(rawLesson, previewMode) {
+  const lesson = normalizeLesson(rawLesson);
+  if (!lesson.sentences || !lesson.sentences.length) {
+    alert("⚠️ This lesson has no sentences.");
+    return;
+  }
+
+  const groupedSentences = groupSentencesForStudent(lesson.sentences);
+  const finalLesson = { videoUrl: lesson.videoUrl, sentences: groupedSentences };
+
+  studentState = {
+    lesson: finalLesson, currentIdx: 0, videoEl: null, stopTimer: null,
+    answers: {}, results: {}, submittedSentences: {}, finished: false,
+    isPreview: previewMode || false, autoAdvanceTimer: null, autoAdvanceCountInterval: null
+  };
+
+  if (previewMode) {
+    const app = document.getElementById("app");
+    app.style.display = "none";
+    if (builderPlayer && typeof builderPlayer.pause === "function") {
+      try { builderPlayer.pause(); } catch (e) {}
+    }
+    let studentEl = document.getElementById("studentApp");
+    if (!studentEl) {
+      studentEl = document.createElement("div");
+      studentEl.id = "studentApp";
+      studentEl.className = "container";
+      document.body.appendChild(studentEl);
+    }
+    studentEl.style.display = "block";
+    studentEl.innerHTML =
+      '<div style="margin-bottom:14px;">' +
+        '<button class="secondary" onclick="exitPreview()">⬅ Back to editor</button>' +
+      '</div>' +
+      '<h1>🎧 Listening Exercise</h1>' +
+      buildStudentMarkup(finalLesson);
+  } else {
+    document.getElementById("app").innerHTML =
+      '<h1>🎧 Listening Exercise</h1>' + buildStudentMarkup(finalLesson);
+  }
+
+  studentState.videoEl = document.getElementById("studentVideo");
+  renderProgressDots();
+  loadSentence(0);
+}
+
+function buildStudentMarkup(lesson) {
+  return '<div class="card">' +
+      '<video id="studentVideo" class="video-player" controls crossorigin="anonymous" muted playsinline>' +
+        '<source src="' + escapeAttr(lesson.videoUrl) + '">' +
+      '</video>' +
+    '</div>' +
+    '<div class="card student-card" id="studentCard">' +
+      '<div class="progress-dots" id="progressDots"></div>' +
+      '<div class="sentence-display" id="sentenceDisplay"></div>' +
+      '<div style="text-align:center;margin-top:18px;display:flex;gap:10px;justify-content:center;flex-wrap:wrap;">' +
+        '<button class="secondary" onclick="previousSentence()" id="prevBtn">⬅ Previous</button>' +
+        '<button class="secondary" onclick="replayCurrent()">🔁 Replay</button>' +
+        '<button class="success" onclick="submitCurrentSentence()" id="submitBtn">✅ Submit</button>' +
+        '<button class="primary-blue" onclick="nextSentence()" id="nextBtn">Next ➡</button>' +
+      '</div>' +
+      '<div class="status" id="studentStatus" style="text-align:center;margin-top:10px;"></div>' +
+    '</div>';
+}
+
+function exitPreview() {
+  if (studentState.videoEl) { try { studentState.videoEl.pause(); } catch (e) {} }
+  clearInterval(studentState.stopTimer);
+  clearTimeout(studentState.autoAdvanceTimer);
+  clearInterval(studentState.autoAdvanceCountInterval);
+  const studentEl = document.getElementById("studentApp");
+  if (studentEl) studentEl.style.display = "none";
+  document.getElementById("app").style.display = "block";
+}
+
+function normalizeLesson(raw) {
+  if (!raw.sentences) return raw;
+  return {
+    videoUrl: raw.videoUrl,
+    sentences: raw.sentences.map(s => {
+      if (s.words) {
+        return {
+          words: s.words.map(w => {
+            if (typeof w === "object" && "text" in w) return { text: w.text, isGap: !!w.isGap };
+            if (typeof w === "object" && "t" in w) return { text: w.t, isGap: !!w.g };
+            return { text: String(w), isGap: false };
+          }),
+          startTime: s.startTime !== undefined ? s.startTime : (s.s || 0),
+          endTime: s.endTime !== undefined ? s.endTime : (s.e || 0)
+        };
+      }
+      return s;
+    })
+  };
+}
+
+function renderProgressDots() {
+  const dots = document.getElementById("progressDots");
+  if (!dots) return;
+  const total = studentState.lesson.sentences.length;
+  let html = "";
+  for (let i = 0; i < total; i++) {
+    let cls = "progress-dot";
+    if (i < studentState.currentIdx) cls += " done";
+    if (i === studentState.currentIdx) cls += " current";
+    html += '<div class="' + cls + '"></div>';
+  }
+  dots.innerHTML = html;
+}
+
+function loadSentence(idx) {
+  clearTimeout(studentState.autoAdvanceTimer);
+  clearInterval(studentState.autoAdvanceCountInterval);
+  studentState.autoAdvanceTimer = null;
+  studentState.autoAdvanceCountInterval = null;
+
+  const submitBtn = document.getElementById("submitBtn");
+  const sentenceAlreadySubmitted = !!studentState.submittedSentences[idx];
+  if (submitBtn) {
+    submitBtn.disabled = sentenceAlreadySubmitted;
+    submitBtn.innerText = sentenceAlreadySubmitted ? "✅ Submitted" : "✅ Submit";
+  }
+
+  const lesson = studentState.lesson;
+  if (idx >= lesson.sentences.length) { showFinalScore(); return; }
+
+  studentState.currentIdx = idx;
+  renderProgressDots();
+
+  const prevBtn = document.getElementById("prevBtn");
+  if (prevBtn) prevBtn.disabled = idx === 0;
+
+  const sentence = lesson.sentences[idx];
+  const display = document.getElementById("sentenceDisplay");
+
+  const html = sentence.words.map((w, wi) => {
+    if (w.isGap) {
+      const key = idx + "_" + wi;
+      const id = "ans_" + idx + "_" + wi;
+      const saved = studentState.answers[key] || "";
+      const alreadyChecked = key in studentState.results;
+
+      if (alreadyChecked) {
+        const isCorrect = studentState.results[key];
+        if (isCorrect) {
+          return '<span><span class="feedback-correct">✓ ' + escapeHtml(w.text) + '</span></span>';
+        }
+        return '<span><span class="feedback-incorrect">' +
+          '<span class="feedback-correct-ans">✓ ' + escapeHtml(w.text) + '</span>' +
+          '<span class="feedback-wrong-ans">✗ ' + escapeHtml(saved || "(blank)") + '</span>' +
+          '</span></span>';
+      }
+
+      return '<span><input type="text" class="gap-input" id="' + id + '" value="' + escapeAttr(saved) + '"' +
+        ' data-correct="' + escapeAttr(w.text) + '"' +
+        ' oninput="trackAnswer(' + idx + ',' + wi + ',this.value)"' +
+        ' onkeydown="handleGapKey(event)"></span>';
+    }
+    return '<span>' + escapeHtml(w.text) + '</span>';
+  }).join("");
+
+  display.innerHTML = html;
+  document.getElementById("studentStatus").innerText = "";
+  playCurrentSentence();
+  setTimeout(() => {
+    const firstInput = display.querySelector("input.gap-input");
+    if (firstInput) firstInput.focus();
+  }, 200);
+}
+
+let sentenceStopHandler = null;
+
+function playCurrentSentence() {
+  const sentence = studentState.lesson.sentences[studentState.currentIdx];
+  const v = studentState.videoEl;
+  if (!v) return;
+  v.currentTime = sentence.startTime;
+  if (sentenceStopHandler) v.removeEventListener("timeupdate", sentenceStopHandler);
+  sentenceStopHandler = function () {
+    if (v.currentTime >= sentence.endTime) {
+      v.pause();
+      v.removeEventListener("timeupdate", sentenceStopHandler);
+      sentenceStopHandler = null;
+    }
+  };
+  v.addEventListener("timeupdate", sentenceStopHandler);
+  const playPromise = v.play();
+  if (playPromise !== undefined) {
+    playPromise.then(() => { setTimeout(() => { v.muted = false; }, 200); })
+      .catch(err => { console.log("Autoplay prevented:", err); });
+  }
+}
+
+function replayCurrent() { playCurrentSentence(); }
+
+function previousSentence() {
+  clearTimeout(studentState.autoAdvanceTimer);
+  clearInterval(studentState.autoAdvanceCountInterval);
+  studentState.autoAdvanceTimer = null;
+  studentState.autoAdvanceCountInterval = null;
+  if (studentState.currentIdx <= 0) return;
+  loadSentence(studentState.currentIdx - 1);
+}
+
+function trackAnswer(sentIdx, wordIdx, value) {
+  studentState.answers[sentIdx + "_" + wordIdx] = value;
+}
+
+function submitCurrentSentence() {
+  const sentIdx = studentState.currentIdx;
+  studentState.submittedSentences[sentIdx] = true;
+  if (studentState.autoAdvanceTimer) return;
+
+  const submitBtn = document.getElementById("submitBtn");
+  if (submitBtn) { submitBtn.disabled = true; submitBtn.innerText = "✅ Submitted"; }
+
+  showAnswerFeedback(sentIdx);
+
+  let countdown = 6;
+  const statusEl = document.getElementById("studentStatus");
+  if (statusEl) statusEl.innerText = "⏭ Next sentence in " + countdown + "s…";
+
+  studentState.autoAdvanceCountInterval = setInterval(() => {
+    countdown--;
+    if (statusEl && countdown > 0) statusEl.innerText = "⏭ Next sentence in " + countdown + "s…";
+  }, 1000);
+
+  studentState.autoAdvanceTimer = setTimeout(() => {
+    clearInterval(studentState.autoAdvanceCountInterval);
+    studentState.autoAdvanceTimer = null;
+    studentState.autoAdvanceCountInterval = null;
+    loadSentence(studentState.currentIdx + 1);
+  }, 6000);
+}
+
+function sentenceHasBeenSubmitted(sentIdx) {
+  const sentence = studentState.lesson.sentences[sentIdx];
+  return sentence.words.some((w, wi) => {
+    if (!w.isGap) return false;
+    return (sentIdx + "_" + wi) in studentState.results;
+  });
+}
+
+function showAnswerFeedback(sentIdx) {
+  const sentence = studentState.lesson.sentences[sentIdx];
+  sentence.words.forEach((w, wi) => {
+    if (!w.isGap) return;
+    const input = document.getElementById("ans_" + sentIdx + "_" + wi);
+    if (!input) return;
+    const userVal = input.value.trim();
+    const correct = w.text.toLowerCase().replace(/[^\w']/g, "");
+    const userClean = userVal.toLowerCase().replace(/[^\w']/g, "");
+    const isCorrect = userClean === correct;
+    studentState.results[sentIdx + "_" + wi] = isCorrect;
+    const wrapper = input.parentElement;
+    if (!wrapper) return;
+    if (isCorrect) {
+      wrapper.innerHTML = '<span class="feedback-correct">✓ ' + escapeHtml(w.text) + '</span>';
+    } else {
+      wrapper.innerHTML = '<span class="feedback-incorrect">' +
+        '<span class="feedback-correct-ans">✓ ' + escapeHtml(w.text) + '</span>' +
+        '<span class="feedback-wrong-ans">✗ ' + escapeHtml(userVal || "(blank)") + '</span>' +
+        '</span>';
+    }
+  });
+}
+
+function handleGapKey(e) {
+  if (e.key === "Enter" || e.key === "Tab") {
+    const inputs = Array.from(document.querySelectorAll("input.gap-input"));
+    const idx = inputs.indexOf(e.target);
+    if (idx >= 0 && idx < inputs.length - 1) {
+      e.preventDefault();
+      inputs[idx + 1].focus();
+    } else if (e.key === "Enter") {
+      e.preventDefault();
+      nextSentence();
+    }
+  }
+}
+
+function checkCurrentSentence() {
+  const idx = studentState.currentIdx;
+  const sentence = studentState.lesson.sentences[idx];
+  let allCorrect = true, hasGaps = false;
+  sentence.words.forEach((w, wi) => {
+    if (w.isGap) {
+      hasGaps = true;
+      const userVal = (studentState.answers[idx + "_" + wi] || "").toLowerCase().trim();
+      const correct = w.text.toLowerCase().replace(/[^\w']/g, "").trim();
+      const userClean = userVal.replace(/[^\w']/g, "");
+      const isCorrect = userClean === correct;
+      studentState.results[idx + "_" + wi] = isCorrect;
+      const input = document.getElementById("ans_" + idx + "_" + wi);
+      if (input) {
+        input.classList.remove("correct", "incorrect");
+        input.classList.add(isCorrect ? "correct" : "incorrect");
+      }
+      if (!isCorrect) allCorrect = false;
+    }
+  });
+  return { allCorrect, hasGaps };
+}
+
+function nextSentence() {
+  clearTimeout(studentState.autoAdvanceTimer);
+  clearInterval(studentState.autoAdvanceCountInterval);
+  studentState.autoAdvanceTimer = null;
+  studentState.autoAdvanceCountInterval = null;
+  checkCurrentSentence();
+  setTimeout(() => { loadSentence(studentState.currentIdx + 1); }, 400);
+}
+
+function showFinalScore() {
+  clearInterval(studentState.stopTimer);
+  studentState.finished = true;
+  let correct = 0, total = 0;
+  studentState.lesson.sentences.forEach((s, si) => {
+    s.words.forEach((w, wi) => {
+      if (w.isGap) {
+        total++;
+        if (studentState.results[si + "_" + wi]) correct++;
+      }
+    });
+  });
+  const pct = total > 0 ? Math.round((correct / total) * 100) : 0;
+  const studentCard = document.getElementById("studentCard");
+  studentCard.innerHTML =
+    '<div class="score-card">' +
+      '<h2>🎉 Finished!</h2>' +
+      '<div class="score-big">' + pct + '%</div>' +
+      '<p><strong>' + correct + ' out of ' + total + '</strong> correct</p>' +
+      '<button class="primary-blue" onclick="restartLesson()">🔁 Try again</button>' +
+      '<button class="success" onclick="showAnswers()">👁 Show answers</button>' +
+      '<div id="answersReview" style="margin-top:24px;text-align:left;display:none;"></div>' +
+    '</div>';
+}
+
+function restartLesson() { startStudent(studentState.lesson, studentState.isPreview); }
+
+function showAnswers() {
+  const review = document.getElementById("answersReview");
+  if (!review) return;
+  review.style.display = "block";
+  const html = studentState.lesson.sentences.map((s, si) => {
+    const sentenceHtml = s.words.map((w, wi) => {
+      if (w.isGap) {
+        const userVal = (studentState.answers[si + "_" + wi] || "").trim() || "(blank)";
+        const isCorrect = studentState.results[si + "_" + wi];
+        const color = isCorrect ? "#10b981" : "#ef4444";
+        return '<b style="color:' + color + ';">' + escapeHtml(w.text) + '</b>' +
+          (isCorrect ? "" : ' <small style="color:#999;">(you: ' + escapeHtml(userVal) + ')</small>');
+      }
+      return escapeHtml(w.text);
+    }).join(" ");
+    return '<div style="padding:8px 0;border-bottom:1px solid #eee;">' + sentenceHtml + '</div>';
+  }).join("");
+  review.innerHTML = '<h3 style="text-align:left;">Answer review</h3>' + html;
+}
+</script>
+
+<script>
+// ============================================================
+// 🔁 Routing — student vs builder
+// ============================================================
+(function () {
+  (async () => {
+    const params = new URLSearchParams(location.search);
+    const shortId = params.get("id");
+    const rawData = params.get("data");
+
+    if (shortId) {
+      document.getElementById("app").innerHTML =
+        '<div class="card"><p>⏳ Loading lesson…</p></div>';
+      try {
+        const res = await fetch(WORKER + "/load-lesson?id=" + encodeURIComponent(shortId));
+        if (!res.ok) throw new Error("Lesson not found (ID: " + shortId + ")");
+        const lesson = await res.json();
+        startStudent(lesson);
+      } catch (e) {
+        document.getElementById("app").innerHTML =
+          '<div class="card"><h2>⚠️ ' + e.message + '</h2></div>';
+      }
+    } else if (rawData) {
+      try {
+        const json = LZString.decompressFromEncodedURIComponent(rawData) || rawData;
+        startStudent(JSON.parse(json));
+      } catch (e) {
+        document.getElementById("app").innerHTML =
+          '<div class="card"><h2>⚠️ Invalid lesson link.</h2></div>';
+      }
+    }
+  })();
+})();
+</script>
+
+</body>
+</html>
