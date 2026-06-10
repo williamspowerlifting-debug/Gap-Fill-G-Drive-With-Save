@@ -1178,8 +1178,7 @@ async function saveExerciseManually() {
     const payload = buildExercisePayload();
     const res = await fetch(WORKER + "/save-teacher-exercise", {
       method: "POST",
-      headers: { "Content-Type":
-                    const res = await fetch(WORKER + "/save-teacher-exercise", {
+         const res = await fetch(WORKER + "/save-teacher-exercise", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload)
