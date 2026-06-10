@@ -1166,37 +1166,51 @@ async function autoSaveExercise(lessonId) {
 }
 
 async function saveExerciseManually() {
-  if (!sentences.length) { alert("Nothing to save yet."); return; }
+  if (!sentences.length) {
+    alert("Nothing to save yet.");
+    return;
+  }
+
   const btn = document.getElementById("saveExBtn");
   const saveStatus = document.getElementById("saveStatus");
+
   btn.disabled = true;
   btn.innerText = "💾 Saving…";
+
   saveStatus.className = "status";
   saveStatus.innerText = "Saving…";
 
   try {
     const payload = buildExercisePayload();
+
     const res = await fetch(WORKER + "/save-teacher-exercise", {
       method: "POST",
-         const res = await fetch(WORKER + "/save-teacher-exercise", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json"
+      },
       body: JSON.stringify(payload)
     });
+
     const data = await res.json();
-    if (!res.ok || !data.exerciseId) throw new Error(data.error || "Save failed");
+
+    if (!res.ok || !data.exerciseId) {
+      throw new Error(data.error || "Save failed");
+    }
+
     currentExerciseId = data.exerciseId;
+
     saveStatus.className = "status success";
     saveStatus.innerText = "✅ Exercise saved!";
-  } catch (e) {
+  }
+  catch (e) {
     saveStatus.className = "status error";
     saveStatus.innerText = "❌ Could not save: " + e.message;
-  } finally {
+  }
+  finally {
     btn.disabled = false;
     btn.innerText = "💾 Save Exercise";
   }
 }
-
 // ============================================================
 // 📚 SAVED EXERCISES PANEL
 // ============================================================
