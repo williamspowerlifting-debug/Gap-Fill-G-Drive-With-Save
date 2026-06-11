@@ -407,6 +407,50 @@ function getTeacherId() {
 }
 // Teacher ID is read at call time via `getTeacherId()` where needed
 
+// Safe global wrapper so inline `onclick="openSavedExercises()"` won't fail
+// even if a later script error prevents the full handler from being defined.
+window.openSavedExercises = async function fallbackOpenSavedExercises() {
+  // If a real implementation was attached later, call it instead.
+  if (typeof window._realOpenSavedExercises === 'function') return window._realOpenSavedExercises();
+
+  try {
+    const overlay = document.getElementById("savedOverlay");
+    const list = document.getElementById("savedList");
+    if (overlay) overlay.classList.add("show");
+    if (list) list.innerHTML = '<p style="color:#999;">Loading…</p>';
+
+    const res = await fetch(WORKER + "/list-teacher-exercises?teacherId=" + encodeURIComponent(getTeacherId()));
+    if (!res.ok) throw new Error("Could not load exercises");
+    const data = await res.json();
+    const exercises = data.exercises || [];
+
+    if (!list) return;
+    if (!exercises.length) {
+      list.innerHTML = '<p style="color:#999;text-align:center;padding:24px;">No saved exercises yet.<br>Create an exercise and click <b>💾 Save Exercise</b>.</p>';
+      return;
+    }
+
+    list.innerHTML = exercises.map(ex => {
+      const date = ex.createdAt ? new Date(ex.createdAt).toLocaleDateString() : "Unknown date";
+      const gapCount = ex.sentences ? ex.sentences.reduce((n, s) => n + (s.words || []).filter(w => w.g).length, 0) : 0;
+      const sentCount = ex.sentences ? ex.sentences.length : 0;
+      const studentLink = ex.lessonId ? location.origin + location.pathname + "?id=" + ex.lessonId : null;
+      return '<div class="exercise-item">' +
+        '<div class="exercise-item-title">' + escapeHtml(ex.name || "Untitled") + (ex.lessonId ? '<span class="autosave-badge">🔗 Link ready</span>' : '') + '</div>' +
+        '<div class="exercise-item-meta">📅 ' + date + ' &nbsp;·&nbsp; 📝 ' + sentCount + ' sentence' + (sentCount !== 1 ? 's' : '') + ' &nbsp;·&nbsp; 🔵 ' + gapCount + ' gap' + (gapCount !== 1 ? 's' : '') + '</div>' +
+        '<div class="exercise-item-actions">' +
+        '<button class="primary-blue" onclick="openSavedExercise(\'' + ex.exerciseId + '\')">✏️ Open & Edit</button>' +
+        (studentLink ? '<button class="success" onclick="copySavedLink(\'' + escapeAttr(studentLink) + '\')">📋 Copy Student Link</button>' : '<button class="secondary" onclick="generateLinkForSaved(\'' + ex.exerciseId + '\')">🔗 Generate Link</button>') +
+        '<button class="danger" onclick="deleteSavedExercise(\'' + ex.exerciseId + '\')">🗑 Delete</button>' +
+        '</div></div>';
+    }).join("");
+
+  } catch (e) {
+    const list = document.getElementById("savedList");
+    if (list) list.innerHTML = '<p style="color:#991b1b;">❌ ' + e.message + '</p>';
+  }
+};
+
 // ── Google Identity helpers (client-side only) ──
 const GOOGLE_CLIENT_ID = "187762853414-v7e6kqi1e86pkf0a2s1b92c6q245ralc.apps.googleusercontent.com";
 
@@ -1404,6 +1448,8 @@ async function openSavedExercises() {
   } catch (e) {
     list.innerHTML = '<p style="color:#991b1b;">❌ ' + e.message + '</p>';
   }
+  // Register the real implementation so the early fallback can delegate to it.
+  try { window._realOpenSavedExercises = openSavedExercises; } catch (e) { /* ignore */ }
 }
 
 function closeSavedExercises() {
