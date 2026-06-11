@@ -1452,9 +1452,10 @@ async function openSavedExercises() {
   try { window._realOpenSavedExercises = openSavedExercises; } catch (e) { /* ignore */ }
 }
 
-function closeSavedExercises() {
-  document.getElementById("savedOverlay").classList.remove("show");
-}
+window.closeSavedExercises = function() {
+  const overlay = document.getElementById("savedOverlay");
+  if (overlay) overlay.classList.remove("show");
+};
 
 async function openSavedExercise(exerciseId) {
   const list = document.getElementById("savedList");
