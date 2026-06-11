@@ -374,9 +374,9 @@ video, iframe.video-player{
 </div>
 
 <!-- Saved Exercises overlay -->
-<div class="saved-overlay" id="savedOverlay" onclick="if(event.target===this)closeSavedExercises()">
+<div class="saved-overlay" id="savedOverlay">
   <div class="saved-modal">
-    <button class="help-close" onclick="closeSavedExercises()">×</button>
+    <button class="help-close" id="savedCloseBtn">×</button>
     <h2>📚 Saved Exercises</h2>
     <div id="savedList"><p style="color:#999;">Loading…</p></div>
   </div>
@@ -505,6 +505,16 @@ function signOut() {
 }
 
 window.addEventListener('load', () => { setTimeout(initGoogleSignIn, 200); });
+
+// Attach Saved Exercises overlay listeners after DOM is ready
+window.addEventListener('load', () => {
+  try {
+    const overlay = document.getElementById('savedOverlay');
+    const closeBtn = document.getElementById('savedCloseBtn');
+    if (overlay) overlay.addEventListener('click', (e) => { if (e.target === overlay) window.closeSavedExercises && window.closeSavedExercises(); });
+    if (closeBtn) closeBtn.addEventListener('click', () => window.closeSavedExercises && window.closeSavedExercises());
+  } catch (e) { /* ignore */ }
+});
 
 // Video state
 let videoMode = null;
