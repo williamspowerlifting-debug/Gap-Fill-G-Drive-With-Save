@@ -1504,14 +1504,11 @@ async function generateLinkForSaved(exerciseId) {
 async function deleteSavedExercise(exerciseId) {
   if (!confirm("Delete this exercise? This cannot be undone.")) return;
   try {
-    const idToken = localStorage.getItem('idToken');
-    const body = idToken ? { idToken, exerciseId } : { teacherId: TEACHER_ID, exerciseId };
+    const idToken = localStorage.getItem('idToken') || null;
+    const body = { teacherId: getTeacherId(), exerciseId, idToken };
     const res = await fetch(WORKER + "/delete-teacher-exercise", {
       method: "DELETE",
       headers: { "Content-Type": "application/json" },
-
-      body: JSON.stringify({ teacherId: getTeacherId(), exerciseId, idToken: localStorage.getItem('idToken') || null })
-=======
       body: JSON.stringify(body)
     });
     if (!res.ok) throw new Error("Delete failed");
