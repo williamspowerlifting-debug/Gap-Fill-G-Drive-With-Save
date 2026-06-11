@@ -932,13 +932,24 @@ function applyTranscriptEdit() {
       }
       return { text: token, time: 0, isGap: shouldBeGap };
     });
-    const oldSent = oldSentences[idx];
+    const matched = oldSentences.find(old =>
+      old.originalText.trim().toLowerCase() === rawText.trim().toLowerCase()
+    );
     return {
       words: sentenceWords,
-      startTime: oldSent ? oldSent.startTime : (idx * 5),
-      endTime: oldSent ? oldSent.endTime : ((idx + 1) * 5),
+      startTime: matched ? matched.startTime : null,
+      endTime:   matched ? matched.endTime   : null,
       originalText: rawText
     };
+  });
+
+  sentences.forEach((s, i) => {
+    if (s.startTime === null) {
+      const prev = sentences[i - 1];
+      const next = sentences[i + 1];
+      s.startTime = prev ? prev.endTime : 0;
+      s.endTime   = next ? next.startTime : s.startTime + 5;
+    }
   });
 
   editModeActive = false;
