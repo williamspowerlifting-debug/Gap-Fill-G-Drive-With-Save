@@ -5,6 +5,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Listening Exercise Builder</title>
 
+<!-- Google Identity Services -->
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+
 <script src="https://cdn.jsdelivr.net/npm/lz-string@1.5.0/libs/lz-string.min.js"></script>
 <script>
   window.WORKER_URL = "https://gapfill-ai-googledrive.williamspowerlifting.workers.dev";
@@ -235,9 +238,21 @@ video, iframe.video-player{
       <h1 style="margin-bottom:4px;">🎧 Create an Exercise</h1>
       <div class="sub">Upload a video. We'll do the rest.</div>
     </div>
-    <button class="primary-blue" onclick="openSavedExercises()" style="white-space:nowrap;margin-top:6px;">
-      📚 Saved Exercises
-    </button>
+    <div id="headerRight" style="display:flex;align-items:center;gap:10px;">
+      <button class="primary-blue" onclick="openSavedExercises()" style="white-space:nowrap;margin-top:6px;">
+        📚 Saved Exercises
+      </button>
+      <div id="authArea" style="display:flex;align-items:center;gap:8px;">
+        <div id="gSignInBtn"></div>
+        <div id="userInfo" style="display:none;align-items:center;gap:8px;">
+          <img id="userPic" src="" alt="" style="width:36px;height:36px;border-radius:50%;object-fit:cover;" />
+          <div style="display:flex;flex-direction:column;align-items:flex-start;">
+            <div id="userName" style="font-weight:700;font-size:14px;color:#111"></div>
+            <button class="secondary" id="signOutBtn" onclick="signOut()" style="padding:6px 10px;font-size:13px;">Sign out</button>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 
   <!-- Step 1 -->
@@ -373,8 +388,16 @@ video, iframe.video-player{
 // ============================================================
 const WORKER = window.WORKER_URL;
 
-// Teacher identity — persistent per browser
+// Teacher identity — persistent per browser. Prefer Google login when available.
 function getTeacherId() {
+  try {
+    const g = localStorage.getItem("googleUser");
+    if (g) {
+      const parsed = JSON.parse(g);
+      if (parsed && parsed.sub) return "g_" + parsed.sub;
+    }
+  } catch (e) { /* ignore */ }
+
   let id = localStorage.getItem("teacherId");
   if (!id) {
     id = "t_" + Math.random().toString(36).slice(2, 11) + Date.now().toString(36);
@@ -383,6 +406,84 @@ function getTeacherId() {
   return id;
 }
 const TEACHER_ID = getTeacherId();
+
+// ── Google Identity helpers (client-side only) ──
+const GOOGLE_CLIENT_ID = "187762853414-v7e6kqi1e86pkf0a2s1b92c6q245ralc.apps.googleusercontent.com";
+
+function base64UrlDecode(str) {
+  // Add padding if missing
+  str = str.replace(/-/g, '+').replace(/_/g, '/');
+  while (str.length % 4) str += '=';
+  try { return decodeURIComponent(escape(window.atob(str))); } catch (e) { return window.atob(str); }
+}
+
+function decodeJwt(jwt) {
+  try {
+    const parts = jwt.split('.');
+    if (parts.length < 2) return null;
+    const payload = base64UrlDecode(parts[1]);
+    return JSON.parse(payload);
+  } catch (e) { return null; }
+}
+
+function handleCredentialResponse(response) {
+  const payload = decodeJwt(response.credential);
+  if (!payload) return console.warn('Could not decode Google credential');
+  const googleUser = {
+    sub: payload.sub,
+    email: payload.email,
+    name: payload.name,
+    picture: payload.picture,
+  };
+  // store both a lightweight user object and the raw id token
+  localStorage.setItem('googleUser', JSON.stringify(googleUser));
+  localStorage.setItem('idToken', response.credential);
+  // Update TEACHER_ID usage in-memory is not strictly needed but update UI
+  updateAuthUI();
+}
+
+function initGoogleSignIn() {
+  if (!window.google || !google.accounts || !google.accounts.id) return;
+  google.accounts.id.initialize({ client_id: GOOGLE_CLIENT_ID, callback: handleCredentialResponse });
+  google.accounts.id.renderButton(document.getElementById('gSignInBtn'), { theme: 'outline', size: 'large' });
+  google.accounts.id.prompt();
+  updateAuthUI();
+}
+
+function updateAuthUI() {
+  const g = localStorage.getItem('googleUser');
+  const userInfo = document.getElementById('userInfo');
+  const gSignInBtn = document.getElementById('gSignInBtn');
+  if (g && userInfo && gSignInBtn) {
+    const u = JSON.parse(g);
+    document.getElementById('userName').innerText = u.name || (u.email || '');
+    const pic = document.getElementById('userPic');
+    if (u.picture) pic.src = u.picture; else pic.src = '';
+    userInfo.style.display = 'flex';
+    gSignInBtn.style.display = 'none';
+    // set teacherId to google-backed id for future requests
+    localStorage.setItem('teacherId', 'g_' + u.sub);
+  } else if (userInfo && gSignInBtn) {
+    userInfo.style.display = 'none';
+    gSignInBtn.style.display = 'block';
+    // keep existing teacherId (anonymous) if present
+  }
+}
+
+function signOut() {
+  localStorage.removeItem('googleUser');
+  // remove google-backed teacherId and idToken so fallback random id is used
+  localStorage.removeItem('teacherId');
+  localStorage.removeItem('idToken');
+  // re-generate anon id for session
+  getTeacherId();
+  if (window.google && google.accounts && google.accounts.id) {
+    try { google.accounts.id.revoke(localStorage.getItem('googleUser'), () => {}); } catch (e) {}
+  }
+  updateAuthUI();
+}
+
+window.addEventListener('load', () => { setTimeout(initGoogleSignIn, 200); });
 
 // Video state
 let videoMode = null;
@@ -1145,6 +1246,7 @@ function buildExercisePayload(lessonId) {
 
   return {
     teacherId: TEACHER_ID,
+    idToken: localStorage.getItem('idToken') || null,
     exerciseId: currentExerciseId || null,
     name: name,
     createdAt: new Date().toISOString(),
@@ -1378,10 +1480,12 @@ async function generateLinkForSaved(exerciseId) {
 async function deleteSavedExercise(exerciseId) {
   if (!confirm("Delete this exercise? This cannot be undone.")) return;
   try {
+    const idToken = localStorage.getItem('idToken');
+    const body = idToken ? { idToken, exerciseId } : { teacherId: TEACHER_ID, exerciseId };
     const res = await fetch(WORKER + "/delete-teacher-exercise", {
       method: "DELETE",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ teacherId: TEACHER_ID, exerciseId })
+      body: JSON.stringify(body)
     });
     if (!res.ok) throw new Error("Delete failed");
     openSavedExercises(); // refresh list
