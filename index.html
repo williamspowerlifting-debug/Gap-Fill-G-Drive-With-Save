@@ -382,8 +382,7 @@ function getTeacherId() {
   }
   return id;
 }
-// TEACHER_ID is obtained dynamically via getTeacherId() at call time
-const TEACHER_ID = getTeacherId();
+// Teacher ID is read at call time via `getTeacherId()` where needed
 
 // Video state
 let videoMode = null;
@@ -1146,6 +1145,7 @@ function buildExercisePayload(lessonId) {
 
   return {
     teacherId: getTeacherId(),
+    idToken: localStorage.getItem('idToken') || null,
     exerciseId: currentExerciseId || null,
     name: name,
     createdAt: new Date().toISOString(),
@@ -1382,7 +1382,7 @@ async function deleteSavedExercise(exerciseId) {
     const res = await fetch(WORKER + "/delete-teacher-exercise", {
       method: "DELETE",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ teacherId: getTeacherId(), exerciseId })
+      body: JSON.stringify({ teacherId: getTeacherId(), exerciseId, idToken: localStorage.getItem('idToken') || null })
     });
     if (!res.ok) throw new Error("Delete failed");
     openSavedExercises(); // refresh list
