@@ -436,10 +436,31 @@ function handleCredentialResponse(response) {
     picture: payload.picture,
   };
   // store both a lightweight user object and the raw id token
+  const prevTeacherId = localStorage.getItem('teacherId');
   localStorage.setItem('googleUser', JSON.stringify(googleUser));
   localStorage.setItem('idToken', response.credential);
-  // Update TEACHER_ID usage in-memory is not strictly needed but update UI
-  updateAuthUI();
+
+  // If the user had an anonymous teacherId (t_...), migrate their saved exercises into their Google account.
+  if (prevTeacherId && prevTeacherId.startsWith('t_')) {
+    (async () => {
+      try {
+        const res = await fetch(WORKER + '/migrate-teacher-exercises', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ idToken: response.credential, oldTeacherId: prevTeacherId })
+        });
+        const data = await res.json().catch(() => ({}));
+        console.log('Migration result', data);
+      } catch (e) {
+        console.warn('Migration failed', e);
+      } finally {
+        // Update UI after migration attempt
+        updateAuthUI();
+      }
+    })();
+  } else {
+    // No migration needed; just update UI
+    updateAuthUI();
+  }
 }
 
 function initGoogleSignIn() {
