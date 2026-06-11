@@ -405,7 +405,7 @@ function getTeacherId() {
   }
   return id;
 }
-const TEACHER_ID = getTeacherId();
+// Teacher ID is read at call time via `getTeacherId()` where needed
 
 // ── Google Identity helpers (client-side only) ──
 const GOOGLE_CLIENT_ID = "187762853414-v7e6kqi1e86pkf0a2s1b92c6q245ralc.apps.googleusercontent.com";
@@ -1266,6 +1266,9 @@ function buildExercisePayload(lessonId) {
     "Exercise " + new Date().toLocaleDateString();
 
   return {
+
+    teacherId: getTeacherId(),
+=======
     teacherId: TEACHER_ID,
     idToken: localStorage.getItem('idToken') || null,
     exerciseId: currentExerciseId || null,
@@ -1355,7 +1358,7 @@ async function openSavedExercises() {
   list.innerHTML = '<p style="color:#999;">Loading…</p>';
 
   try {
-    const res = await fetch(WORKER + "/list-teacher-exercises?teacherId=" + encodeURIComponent(TEACHER_ID));
+    const res = await fetch(WORKER + "/list-teacher-exercises?teacherId=" + encodeURIComponent(getTeacherId()));
     if (!res.ok) throw new Error("Could not load exercises");
     const data = await res.json();
     const exercises = data.exercises || [];
@@ -1413,7 +1416,7 @@ async function openSavedExercise(exerciseId) {
 
   try {
     const res = await fetch(WORKER + "/load-teacher-exercise?teacherId=" +
-      encodeURIComponent(TEACHER_ID) + "&exerciseId=" + encodeURIComponent(exerciseId));
+      encodeURIComponent(getTeacherId()) + "&exerciseId=" + encodeURIComponent(exerciseId));
     if (!res.ok) throw new Error("Could not load exercise");
     const ex = await res.json();
 
@@ -1506,6 +1509,9 @@ async function deleteSavedExercise(exerciseId) {
     const res = await fetch(WORKER + "/delete-teacher-exercise", {
       method: "DELETE",
       headers: { "Content-Type": "application/json" },
+
+      body: JSON.stringify({ teacherId: getTeacherId(), exerciseId, idToken: localStorage.getItem('idToken') || null })
+=======
       body: JSON.stringify(body)
     });
     if (!res.ok) throw new Error("Delete failed");
