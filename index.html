@@ -382,6 +382,7 @@ function getTeacherId() {
   }
   return id;
 }
+// TEACHER_ID is obtained dynamically via getTeacherId() at call time
 const TEACHER_ID = getTeacherId();
 
 // Video state
@@ -1144,7 +1145,7 @@ function buildExercisePayload(lessonId) {
     "Exercise " + new Date().toLocaleDateString();
 
   return {
-    teacherId: TEACHER_ID,
+    teacherId: getTeacherId(),
     exerciseId: currentExerciseId || null,
     name: name,
     createdAt: new Date().toISOString(),
@@ -1232,7 +1233,7 @@ async function openSavedExercises() {
   list.innerHTML = '<p style="color:#999;">Loading…</p>';
 
   try {
-    const res = await fetch(WORKER + "/list-teacher-exercises?teacherId=" + encodeURIComponent(TEACHER_ID));
+    const res = await fetch(WORKER + "/list-teacher-exercises?teacherId=" + encodeURIComponent(getTeacherId()));
     if (!res.ok) throw new Error("Could not load exercises");
     const data = await res.json();
     const exercises = data.exercises || [];
@@ -1290,7 +1291,7 @@ async function openSavedExercise(exerciseId) {
 
   try {
     const res = await fetch(WORKER + "/load-teacher-exercise?teacherId=" +
-      encodeURIComponent(TEACHER_ID) + "&exerciseId=" + encodeURIComponent(exerciseId));
+      encodeURIComponent(getTeacherId()) + "&exerciseId=" + encodeURIComponent(exerciseId));
     if (!res.ok) throw new Error("Could not load exercise");
     const ex = await res.json();
 
@@ -1381,7 +1382,7 @@ async function deleteSavedExercise(exerciseId) {
     const res = await fetch(WORKER + "/delete-teacher-exercise", {
       method: "DELETE",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ teacherId: TEACHER_ID, exerciseId })
+      body: JSON.stringify({ teacherId: getTeacherId(), exerciseId })
     });
     if (!res.ok) throw new Error("Delete failed");
     openSavedExercises(); // refresh list
