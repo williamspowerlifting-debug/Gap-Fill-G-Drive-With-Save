@@ -140,12 +140,12 @@ video, iframe.video-player{
 .help-overlay.show{display:flex;}
 .help-modal{
   background:white;border-radius:14px;max-width:700px;width:100%;
-  max-height:90vh;overflow-y:auto;padding:24px;
+  max-height:90vh;overflow-y:auto;padding:24px;position:relative;
 }
 .help-modal h2{margin-top:0;color:#4f46e5;}
 .help-modal h3{color:#1f2937;border-bottom:2px solid #e5e7eb;padding-bottom:6px;margin-top:20px;}
 .help-modal code{background:#f3f4f6;padding:2px 6px;border-radius:4px;font-size:13px;}
-.help-close{background:#ef4444;color:white;border:none;width:32px;height:32px;border-radius:50%;cursor:pointer;font-size:18px;float:right;}
+.help-close{background:#ef4444;color:white;border:none;width:36px;height:36px;border-radius:50%;cursor:pointer;font-size:18px;display:flex;align-items:center;justify-content:center;position:absolute;top:12px;right:12px;box-shadow:0 4px 8px rgba(0,0,0,0.12);}
 
 /* ── Saved Exercises overlay ── */
 .saved-overlay{
@@ -157,7 +157,7 @@ video, iframe.video-player{
 .saved-overlay.show{display:flex;}
 .saved-modal{
   background:white;border-radius:14px;max-width:740px;width:100%;
-  padding:24px;margin:auto;
+  padding:24px;margin:auto;position:relative;
 }
 .saved-modal h2{margin-top:0;color:#4f46e5;}
 .exercise-item{
@@ -338,9 +338,9 @@ video, iframe.video-player{
 <!-- Help overlay -->
 <div class="help-overlay" id="helpOverlay" onclick="if(event.target===this)this.classList.remove('show')">
   <div class="help-modal">
-    <button class="help-close" onclick="document.getElementById('helpOverlay').classList.remove('show')">×</button>
+    <button class="help-close" onclick="document.getElementById('helpOverlay').classList.remove('show')" aria-label="Close help">×</button>
     <h2>📖 How to Use</h2>
-    <p>Create a listening exercise in under 2 minutes.</p>
+    <p>Create and share gap-fill listening exercises quickly — upload a video, edit gaps, and save or share with students.</p>
     <h3>1. Upload a video</h3>
     <p>Drag and drop or click. Any common format works.</p>
     <h3>2. Wait for transcript</h3>
@@ -357,7 +357,7 @@ video, iframe.video-player{
     <ul>
       <li><b>Preview</b> — See what students will see.</li>
       <li><b>Student Link</b> — Copy and send. No signup needed.</li>
-      <li><b>Save Exercise</b> — Saves to your Saved Exercises list on this browser.</li>
+      <li><b>Save Exercise</b> — Saves to your Saved Exercises list on this browser. Sign in with Google to sync your exercises across devices.</li>
     </ul>
     <h3>Saved Exercises</h3>
     <p>Click <b>📚 Saved Exercises</b> at any time to see all exercises you've created.
