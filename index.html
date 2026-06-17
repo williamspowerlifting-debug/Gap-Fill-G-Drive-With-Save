@@ -425,6 +425,10 @@ video, iframe.video-player{
 </div>
 
 <script>
+// Forward declaration — autoTranscribe is defined in the next script block
+// but handleFileUpload calls it, so we declare a placeholder here.
+// The real function overwrites this when the second script block loads.
+var autoTranscribe;
 // ============================================================
 // 🌐 Global state
 // ============================================================
@@ -871,7 +875,7 @@ function escapeHtml(s) { return escapeAttr(s); }
 // ============================================================
 // 📝 AUTO-TRANSCRIBE
 // ============================================================
-async function autoTranscribe() {
+autoTranscribe = async function() {
   const status = document.getElementById("transcribeStatus");
   let audioUrl;
   if (videoMode === "bunny") audioUrl = bunnyDirectUrl;
@@ -1075,15 +1079,13 @@ function toggleEditMode() {
     btn.className  = "danger";
     if (footer) footer.style.display = "flex";
     renderTranscriptEditMode();
-  } else {
-    btn.innerText  = "✏️ Edit Text";
-    btn.className  = "secondary";
-    box.contentEditable = "false";
-    box.classList.remove("edit-mode");
-    if (footer) footer.style.display = "none";
-    renderTranscript();
+   } else {
+    // Button toggled off = same as clicking Apply Changes
+    finishTranscriptEdit();
   }
-}
+
+// Stored outside functions so rebuildSentencesFromDOM can read it
+let _editGapSnapshot = []; // array of arrays: _editGapSnapshot[si][wi] = true/false
 
 function renderTranscriptEditMode() {
   const box = document.getElementById("transcriptBox");
@@ -1091,7 +1093,10 @@ function renderTranscriptEditMode() {
   box.classList.add("edit-mode");
   box.setAttribute("spellcheck", "false");
 
-  // Render each word as a span; gap spans keep their highlight
+  // Snapshot gap positions by sentence/word index BEFORE the DOM is touched.
+  // This is our ground truth — we don't rely on data-gap attributes surviving.
+  _editGapSnapshot = sentences.map(s => s.words.map(w => w.isGap));
+
   box.innerHTML = sentences.map((s, si) =>
     '<div class="transcript-sentence" data-sent="' + si + '">' +
     s.words.map((w, wi) => {
@@ -1099,15 +1104,13 @@ function renderTranscriptEditMode() {
       return '<span class="' + cls + '"' +
              ' data-sent="' + si + '"' +
              ' data-word="' + wi + '"' +
-             ' data-gap="'  + (w.isGap ? "1" : "0") + '">' +
+             ' data-gap="' + (w.isGap ? "1" : "0") + '">' +
              escapeHtml(w.text) +
              '</span>';
     }).join(" ") +
     '</div>'
   ).join("");
 
-  // Intercept paste: strip all HTML, insert plain text only
-  // This preserves undo history better than setting innerHTML
   box.addEventListener("paste", _handleEditPaste, { once: false });
 }
 
@@ -1122,55 +1125,51 @@ function _handleEditPaste(e) {
 
 function rebuildSentencesFromDOM() {
   const box = document.getElementById("transcriptBox");
+
+  // ── Strategy ──────────────────────────────────────────────────────────────
+  // We can't trust the span structure to survive contenteditable editing.
+  // Instead we extract plain text per sentence-line, split into tokens,
+  // then match each token back to the original word list by position.
+  // Gap status comes from _editGapSnapshot (captured before any editing).
+  // If a teacher edited a gap word's text, the gap stays with the new text.
+  // If they added words, extras are plain. If they deleted words, gaps drop.
+  // ─────────────────────────────────────────────────────────────────────────
+
   const sentenceDivs = box.querySelectorAll(".transcript-sentence");
   const rebuilt = [];
 
   sentenceDivs.forEach((div, si) => {
-    const original = sentences[si] || { startTime: 0, endTime: 0 };
-    const newWords = [];
+    const original    = sentences[si] || { startTime: 0, endTime: 0 };
+    const gapRow      = _editGapSnapshot[si] || [];
 
-    div.childNodes.forEach(node => {
-      if (node.nodeType === Node.ELEMENT_NODE &&
-          node.classList.contains("transcript-word")) {
+    // Get the plain text of this line exactly as the teacher left it.
+    // innerText respects visible whitespace; textContent is safer cross-browser.
+    const plainText = div.innerText !== undefined ? div.innerText : div.textContent;
+    const tokens = plainText.trim().split(/\s+/).filter(Boolean);
 
-        // Get whatever the teacher typed inside this span
-        const rawText = node.textContent;
-        const tokens  = rawText.trim().split(/\s+/).filter(Boolean);
-        if (!tokens.length) return; // span emptied → drop the word
+    if (!tokens.length) return; // entire line deleted → drop sentence
 
-        const wasGap = node.getAttribute("data-gap") === "1";
-        const originalWordIdx = parseInt(node.getAttribute("data-word"), 10);
+    const newWords = tokens.map((tok, wi) => ({
+      text:   tok,
+      // Position wi maps to original word wi; if that was a gap, keep it.
+      // Works correctly whether the teacher changed the text or not.
+      isGap:  wi < gapRow.length ? gapRow[wi] : false,
+      time:   (original.words && original.words[wi]) ? (original.words[wi].time || 0) : 0
+    }));
 
-        tokens.forEach((tok, ti) => {
-          if (ti === 0) {
-            // First (or only) token: inherits gap status.
-            // The new text IS the new answer — gap stays if it was a gap.
-            newWords.push({ text: tok, isGap: wasGap, time: 0 });
-          } else {
-            // Extra tokens the teacher typed inside the span → plain words
-            newWords.push({ text: tok, isGap: false, time: 0 });
-          }
-        });
-
-      } else if (node.nodeType === Node.TEXT_NODE) {
-        // Raw typed/pasted text outside any span → plain words
-        const tokens = node.textContent.trim().split(/\s+/).filter(Boolean);
-        tokens.forEach(tok => newWords.push({ text: tok, isGap: false, time: 0 }));
-      }
+    rebuilt.push({
+      words:        newWords,
+      startTime:    original.startTime || 0,
+      endTime:      original.endTime   || 0,
+      originalText: newWords.map(w => w.text).join(" ")
     });
-
-    if (newWords.length) {
-      rebuilt.push({
-        words:        newWords,
-        startTime:    original.startTime || 0,
-        endTime:      original.endTime   || 0,
-        originalText: newWords.map(w => w.text).join(" ")
-      });
-    }
-    // Empty sentence (teacher deleted all words in a line) is dropped silently
   });
 
-  if (rebuilt.length) sentences = rebuilt;
+  if (rebuilt.length) {
+    sentences = rebuilt;
+  }
+
+  _editGapSnapshot = []; // clear snapshot
 }
 
 function finishTranscriptEdit() {
