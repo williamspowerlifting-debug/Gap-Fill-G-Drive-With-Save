@@ -425,6 +425,10 @@ video, iframe.video-player{
 </div>
 
 <script>
+// Forward declaration — autoTranscribe is defined in the next script block
+// but handleFileUpload calls it, so we declare a placeholder here.
+// The real function overwrites this when the second script block loads.
+var autoTranscribe;
 // ============================================================
 // 🌐 Global state
 // ============================================================
@@ -871,7 +875,7 @@ function escapeHtml(s) { return escapeAttr(s); }
 // ============================================================
 // 📝 AUTO-TRANSCRIBE
 // ============================================================
-async function autoTranscribe() {
+autoTranscribe = async function() {
   const status = document.getElementById("transcribeStatus");
   let audioUrl;
   if (videoMode === "bunny") audioUrl = bunnyDirectUrl;
