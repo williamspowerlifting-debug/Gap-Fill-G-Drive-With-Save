@@ -62,7 +62,8 @@ button.big{padding:16px 24px;font-size:17px;font-weight:600;}
   width:0%;transition:width 0.2s;color:white;text-align:center;
   font-size:12px;line-height:22px;
 }
-video,iframe.video-player{
+
+video, iframe.video-player{
   width:100%;max-width:100%;height:380px;display:block;
   border-radius:12px;border:none;background:#000;
 }
@@ -278,11 +279,6 @@ video,iframe.video-player{
     <div class="transcript-box" id="transcriptBox"></div>
   </div>
 
-  <div id="editFooter" style="display:none;justify-content:flex-end;gap:10px;margin-top:12px;">
-    <button class="secondary" onclick="cancelTranscriptEdit()">❌ Cancel Changes</button>
-    <button class="success" onclick="finishTranscriptEdit()">✅ Apply Changes</button>
-  </div>
-
   <div class="card" id="step5Card" style="display:none;">
     <h2>5. Share</h2>
     <div style="margin-bottom:14px;">
@@ -312,7 +308,7 @@ video,iframe.video-player{
     <ul>
       <li><b>Click any word</b> to make it a gap (turns yellow).</li>
       <li><b>Click a yellow word</b> to remove the gap.</li>
-      <li><b>"✏️ Edit Text"</b> — type directly in the transcript. Gap words stay highlighted. Click Apply Changes when done.</li>
+      <li><b>"✏️ Edit Text"</b> button — fix transcript mistakes. Your gaps are preserved.</li>
     </ul>
     <h3>4. Generate Gaps</h3><p>AI fills in gaps based on the level you choose.</p>
     <h3>5. Share with students</h3>
@@ -460,7 +456,32 @@ function signOut() {
   updateAuthUI();
 }
 
-window.addEventListener('load', () => setTimeout(initGoogleSignIn, 200));
+window.addEventListener('load', () => { setTimeout(initGoogleSignIn, 200); });
+
+// Attach Saved Exercises overlay listeners after DOM is ready
+window.addEventListener('load', () => {
+  try {
+    const overlay = document.getElementById('savedOverlay');
+    const closeBtn = document.getElementById('savedCloseBtn');
+    if (overlay) overlay.addEventListener('click', (e) => { if (e.target === overlay) window.closeSavedExercises && window.closeSavedExercises(); });
+    if (closeBtn) closeBtn.addEventListener('click', () => window.closeSavedExercises && window.closeSavedExercises());
+  } catch (e) { /* ignore */ }
+});
+
+// Video state
+let videoMode = null;
+let bunnyGuid = null;
+let bunnyDirectUrl = null;
+let bunnyEmbedUrl = null;
+let externalVideoUrl = null;
+let builderPlayer = null;
+
+// Transcript state
+let sentences = [];
+let editModeActive = false;
+
+// Current exercise tracking (for auto-save after link generation)
+let currentExerciseId = null;
 
 // ============================================================
 // 🎬 VIDEO HANDLING
@@ -754,98 +775,131 @@ function buildSentencesFromTranscript(data) {
 }
 
 // ============================================================
-// ✏️ CONTENTEDITABLE TRANSCRIPT EDITOR
+// ✏️ INLINE EDIT TEXT MODE
 // ============================================================
 function toggleEditMode() {
   editModeActive = !editModeActive;
-  const btn    = document.getElementById("editModeBtn");
-  const footer = document.getElementById("editFooter");
+  const btn = document.getElementById("editModeBtn");
   if (editModeActive) {
-    editSnapshot  = JSON.parse(JSON.stringify(sentences));
-    btn.innerText = "❌ Done Editing";
+    btn.innerText = "❌ Cancel Edit";
     btn.className = "danger";
-    if (footer) footer.style.display = "flex";
     renderTranscriptEditMode();
   } else {
-    finishTranscriptEdit();
+    cancelTranscriptEdit();
   }
 }
 
 function renderTranscriptEditMode() {
   const box = document.getElementById("transcriptBox");
-  box.contentEditable = "true";
   box.classList.add("edit-mode");
-  box.setAttribute("spellcheck","false");
-  _editGapSnapshot = sentences.map(s => s.words.map(w => w.isGap));
-  box.innerHTML = sentences.map((s,si) =>
-    '<div class="transcript-sentence" data-sent="' + si + '">' +
-    s.words.map((w,wi) => {
-      const cls = "transcript-word" + (w.isGap ? " gap" : "");
-      return '<span class="' + cls + '" data-sent="' + si +
-             '" data-word="' + wi + '" data-gap="' + (w.isGap?"1":"0") + '">' +
-             escapeHtml(w.text) + '</span>';
-    }).join(" ") + '</div>'
-  ).join("");
-  box.addEventListener("paste", _handleEditPaste, { once:false });
+
+  let html = '<div style="background:#fefce8;border-left:4px solid #f59e0b;padding:10px 14px;' +
+    'border-radius:6px;margin-bottom:14px;font-size:13px;color:#92400e;">' +
+    '✏️ <b>Gap preview shown above each sentence.</b> Highlighted words are current gaps. ' +
+    'Edit the text below — gaps will be re-applied to matching words after you save.</div>';
+
+  sentences.forEach((s, si) => {
+    const hasGaps = s.words.some(w => w.isGap);
+    html += '<div class="sentence-edit-row">';
+
+    if (hasGaps) {
+      const previewHtml = s.words.map(w => {
+        if (w.isGap) {
+          return '<span style="background:#fde68a;color:#78350f;font-weight:700;padding:1px 6px;border-radius:4px;margin:0 1px;">' + escapeHtml(w.text) + '</span>';
+        }
+        return '<span style="margin:0 1px;">' + escapeHtml(w.text) + '</span>';
+      }).join(' ');
+
+      html += '<div style="font-size:13px;padding:5px 10px;margin-bottom:3px;background:#fffbeb;' +
+        'border:1px solid #fde68a;border-radius:6px;line-height:1.7;color:#374151;">' +
+        '<span style="font-size:11px;font-weight:700;color:#b45309;text-transform:uppercase;' +
+        'letter-spacing:0.05em;margin-right:6px;">Gaps:</span>' + previewHtml + '</div>';
+    }
+
+    html += '<textarea class="sentence-edit-textarea" data-sent="' + si + '" oninput="autoResizeTextarea(this)">' +
+      escapeHtml(s.originalText) + '</textarea></div>';
+  });
+
+  html += '<div class="transcript-edit-header" style="margin-top:18px;border-top:1px solid #e5e7eb;padding-top:14px;border-bottom:none;">' +
+    '<button class="success" onclick="applyTranscriptEdit()">✅ Apply Changes</button>' +
+    '<button class="danger" onclick="cancelTranscriptEdit()">❌ Cancel</button>' +
+    '<span style="font-size:13px;color:#6b7280;align-self:center;">Edit the text below. Gaps will be re-applied to matching words.</span></div>';
+
+  box.innerHTML = html;
+  setTimeout(() => { box.querySelectorAll(".sentence-edit-textarea").forEach(ta => autoResizeTextarea(ta)); }, 0);
 }
 
-function _handleEditPaste(e) {
-  e.preventDefault();
-  const text = (e.clipboardData||window.clipboardData)
-    .getData("text/plain").replace(/\r?\n/g," ");
-  document.execCommand("insertText", false, text);
+function autoResizeTextarea(ta) {
+  ta.style.height = "auto";
+  ta.style.height = (ta.scrollHeight + 2) + "px";
 }
 
-function rebuildSentencesFromDOM() {
-  const box          = document.getElementById("transcriptBox");
-  const sentenceDivs = box.querySelectorAll(".transcript-sentence");
-  const rebuilt      = [];
-  sentenceDivs.forEach((div, si) => {
-    const original = sentences[si] || { startTime:0, endTime:0 };
-    const gapRow   = _editGapSnapshot[si] || [];
-    const plainText= div.innerText !== undefined ? div.innerText : div.textContent;
-    const tokens   = plainText.trim().split(/\s+/).filter(Boolean);
-    if (!tokens.length) return;
-    const newWords = tokens.map((tok,wi) => ({
-      text:  tok,
-      isGap: wi < gapRow.length ? gapRow[wi] : false,
-      time:  (original.words && original.words[wi]) ? (original.words[wi].time||0) : 0
-    }));
-    rebuilt.push({
-      words:        newWords,
-      startTime:    original.startTime||0,
-      endTime:      original.endTime||0,
-      originalText: newWords.map(w=>w.text).join(" ")
+function applyTranscriptEdit() {
+  const box = document.getElementById("transcriptBox");
+  const textareas = box.querySelectorAll(".sentence-edit-textarea");
+  if (!textareas.length) return;
+
+  const newText = Array.from(textareas).map(ta => ta.value.trim()).filter(Boolean).join(" ");
+  if (!newText) { alert("Transcript cannot be empty."); return; }
+
+  const existingGapCounts = {};
+  sentences.forEach(sentence => {
+    sentence.words.forEach(word => {
+      if (word.isGap) {
+        const clean = word.text.toLowerCase().replace(/[^\w']/g, "");
+        if (clean) existingGapCounts[clean] = (existingGapCounts[clean] || 0) + 1;
+      }
     });
   });
-  if (rebuilt.length) sentences = rebuilt;
-  _editGapSnapshot = [];
-}
 
-function finishTranscriptEdit() {
-  const box = document.getElementById("transcriptBox");
-  box.removeEventListener("paste", _handleEditPaste);
-  rebuildSentencesFromDOM();
-  editSnapshot = null; editModeActive = false;
-  box.contentEditable = "false"; box.classList.remove("edit-mode");
-  const footer = document.getElementById("editFooter");
-  if (footer) footer.style.display = "none";
+  const rawSentences = splitIntoSentences(newText);
+  const oldSentences = sentences;
+
+  sentences = rawSentences.map((rawText) => {
+    const tokens = rawText.split(/\s+/).filter(Boolean);
+    const sentenceWords = tokens.map(token => {
+      const clean = token.toLowerCase().replace(/[^\w']/g, "");
+      let shouldBeGap = false;
+      if (clean && existingGapCounts[clean] && existingGapCounts[clean] > 0) {
+        shouldBeGap = true;
+        existingGapCounts[clean]--;
+      }
+      return { text: token, time: 0, isGap: shouldBeGap };
+    });
+    const matched = oldSentences.find(old =>
+      old.originalText.trim().toLowerCase() === rawText.trim().toLowerCase()
+    );
+    return {
+      words: sentenceWords,
+      startTime: matched ? matched.startTime : null,
+      endTime:   matched ? matched.endTime   : null,
+      originalText: rawText
+    };
+  });
+
+  sentences.forEach((s, i) => {
+    if (s.startTime === null) {
+      const prev = sentences[i - 1];
+      const next = sentences[i + 1];
+      s.startTime = prev ? prev.endTime : 0;
+      s.endTime   = next ? next.startTime : s.startTime + 5;
+    }
+  });
+
+  editModeActive = false;
   const btn = document.getElementById("editModeBtn");
-  if (btn) { btn.innerText = "✏️ Edit Text"; btn.className = "secondary"; }
+  btn.innerText = "✏️ Edit Text";
+  btn.className = "secondary";
+  box.classList.remove("edit-mode");
   renderTranscript();
 }
 
 function cancelTranscriptEdit() {
-  if (!editSnapshot) return;
-  const box = document.getElementById("transcriptBox");
-  box.removeEventListener("paste", _handleEditPaste);
-  sentences = JSON.parse(JSON.stringify(editSnapshot));
-  editSnapshot = null; editModeActive = false;
-  box.contentEditable = "false"; box.classList.remove("edit-mode");
-  const footer = document.getElementById("editFooter");
-  if (footer) footer.style.display = "none";
+  editModeActive = false;
   const btn = document.getElementById("editModeBtn");
   if (btn) { btn.innerText = "✏️ Edit Text"; btn.className = "secondary"; }
+  const box = document.getElementById("transcriptBox");
+  if (box) box.classList.remove("edit-mode");
   renderTranscript();
 }
 
@@ -854,25 +908,17 @@ function cancelTranscriptEdit() {
 // ============================================================
 function renderTranscript() {
   const box = document.getElementById("transcriptBox");
-  box.contentEditable = "false"; box.classList.remove("edit-mode");
   if (!sentences.length) { box.innerHTML = "<i>No transcript.</i>"; return; }
   box.innerHTML = sentences.map((s,si) => {
     const wordsHtml = s.words.map((w,wi) => {
       const cls = "transcript-word" + (w.isGap ? " gap" : "");
-      return '<span class="' + cls + '" id="tw_' + si + '_' + wi +
-             '" data-sent="' + si + '" data-word="' + wi + '">' +
-             escapeHtml(w.text) + '</span>';
+      return '<span class="' + cls + '" data-sent="' + si + '" data-word="' + wi + '">' + escapeHtml(w.text) + '</span>';
     }).join(" ");
     return '<div class="transcript-sentence">' + wordsHtml + '</div>';
   }).join("");
-  const helpEl = document.querySelector(".transcript-help");
-  if (helpEl) {
-    helpEl.style.background = ""; helpEl.style.borderLeftColor = ""; helpEl.style.color = "";
-    helpEl.innerHTML = '💡 <b>Tap or click any word</b> to mark it as a gap. Tap a yellow word to remove the gap.';
-  }
 }
 
-document.addEventListener("click", function(e) {
+document.addEventListener("click", function (e) {
   if (editModeActive) return;
   const target = e.target;
   if (!target.classList || !target.classList.contains("transcript-word")) return;
