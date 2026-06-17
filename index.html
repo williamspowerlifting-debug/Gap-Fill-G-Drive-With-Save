@@ -418,7 +418,12 @@ video, iframe.video-player{
 <!-- Saved Exercises overlay -->
 <div class="saved-overlay" id="savedOverlay">
   <div class="saved-modal">
-    <button class="help-close" id="savedCloseBtn">×</button>
+    <button
+  class="help-close"
+  id="savedCloseBtn"
+  onclick="closeSavedExercises()">
+  ×
+</button>
     <h2>📚 Saved Exercises</h2>
     <div id="savedList"><p style="color:#999;">Loading…</p></div>
   </div>
@@ -1066,25 +1071,20 @@ function buildSentencesFromTranscript(data) {
 // ============================================================
 
 function toggleEditMode() {
-  editModeActive = !editModeActive;
-  const btn    = document.getElementById("editModeBtn");
-  const box    = document.getElementById("transcriptBox");
+  if (editModeActive) return;
+
+  editModeActive = true;
+  updateHelpTooltip(editModeActive);
+
+  const btn = document.getElementById("editModeBtn");
   const footer = document.getElementById("editFooter");
 
-  if (editModeActive) {
-    editSnapshot = JSON.parse(JSON.stringify(sentences));
-    btn.innerText  = "❌ Done Editing";
-    btn.className  = "danger";
-    if (footer) footer.style.display = "flex";
-    renderTranscriptEditMode();
-  } else {
-    btn.innerText  = "✏️ Edit Text";
-    btn.className  = "secondary";
-    box.contentEditable = "false";
-    box.classList.remove("edit-mode");
-    if (footer) footer.style.display = "none";
-    renderTranscript();
-  }
+  editSnapshot = JSON.parse(JSON.stringify(sentences));
+
+  if (btn) btn.style.display = "none";
+  if (footer) footer.style.display = "flex";
+
+  renderTranscriptEditMode();
 }
 
 function renderTranscriptEditMode() {
@@ -1110,7 +1110,8 @@ function renderTranscriptEditMode() {
 
   // Intercept paste: strip all HTML, insert plain text only
   // This preserves undo history better than setting innerHTML
-  box.addEventListener("paste", _handleEditPaste, { once: false });
+  box.removeEventListener("paste", _handleEditPaste);
+  box.addEventListener("paste", _handleEditPaste);
 }
 
 // Paste handler — defined once, referenced by name so we can remove it
@@ -1123,7 +1124,36 @@ function _handleEditPaste(e) {
 }
 
 function rebuildSentencesFromDOM() {
-  const box = document.getElementById("transcriptBox");
+   const box = document.getElementById("transcriptBox");
+  
+box.querySelectorAll(".gap").forEach(el => {
+  el.setAttribute("data-gap", "1");
+});
+// Convert Chrome-generated formatting wrappers back into gap spans
+box.querySelectorAll(
+  'font, span[style*="background-color"]'
+).forEach(el => {
+
+  const text = el.textContent.trim();
+  if (!text) return;
+
+  const gapSpan = document.createElement("span");
+  gapSpan.className = "transcript-word gap";
+  gapSpan.setAttribute("data-gap", "1");
+  gapSpan.textContent = text;
+
+  el.replaceWith(gapSpan);
+});
+console.log("AFTER NORMALIZATION");
+box.querySelectorAll(".transcript-word").forEach(el => {
+  console.log(
+    el.textContent,
+    "gap:",
+    el.classList.contains("gap"),
+    "data-gap:",
+    el.getAttribute("data-gap")
+  );
+});
   const sentenceDivs = box.querySelectorAll(".transcript-sentence");
   const rebuilt = [];
 
@@ -1131,16 +1161,29 @@ function rebuildSentencesFromDOM() {
     const original = sentences[si] || { startTime: 0, endTime: 0 };
     const newWords = [];
 
+    div.querySelectorAll("font").forEach(fontEl => {
+
+  const gapSpan = document.createElement("span");
+
+  gapSpan.className = "transcript-word gap";
+  gapSpan.setAttribute("data-gap", "1");
+  gapSpan.textContent = fontEl.textContent;
+
+  fontEl.replaceWith(gapSpan);
+});
+
     div.childNodes.forEach(node => {
       if (node.nodeType === Node.ELEMENT_NODE &&
           node.classList.contains("transcript-word")) {
 
         // Get whatever the teacher typed inside this span
-        const rawText = node.textContent;
+        const rawText = node.innerText || node.textContent;
         const tokens  = rawText.trim().split(/\s+/).filter(Boolean);
         if (!tokens.length) return; // span emptied → drop the word
 
-        const wasGap = node.getAttribute("data-gap") === "1";
+        const wasGap =
+  node.classList.contains("gap") ||
+  node.getAttribute("data-gap") === "1";
         const originalWordIdx = parseInt(node.getAttribute("data-word"), 10);
 
         tokens.forEach((tok, ti) => {
@@ -1155,11 +1198,35 @@ function rebuildSentencesFromDOM() {
         });
 
       } else if (node.nodeType === Node.TEXT_NODE) {
-        // Raw typed/pasted text outside any span → plain words
-        const tokens = node.textContent.trim().split(/\s+/).filter(Boolean);
-        tokens.forEach(tok => newWords.push({ text: tok, isGap: false, time: 0 }));
-      }
-    });
+
+  const tokens = node.textContent.trim().split(/\s+/).filter(Boolean);
+
+  const prev = node.previousSibling;
+
+  const inheritGap =
+    prev &&
+    prev.nodeType === Node.ELEMENT_NODE &&
+    (
+      prev.classList?.contains("gap") ||
+      prev.tagName === "FONT"
+    );
+
+  tokens.forEach(tok =>
+    newWords.push({
+      text: tok,
+      isGap: inheritGap,
+      time: 0
+    })
+  );
+}
+console.log(
+  JSON.stringify(
+    newWords.map(w => ({
+      text: w.text,
+      gap: w.isGap
+    }))
+  )
+); });
 
     if (newWords.length) {
       rebuilt.push({
@@ -1177,6 +1244,9 @@ function rebuildSentencesFromDOM() {
 
 function finishTranscriptEdit() {
   // Remove paste listener before leaving edit mode
+  console.log(
+  document.getElementById("transcriptBox").innerHTML
+);
   const box = document.getElementById("transcriptBox");
   box.removeEventListener("paste", _handleEditPaste);
 
@@ -1184,6 +1254,7 @@ function finishTranscriptEdit() {
 
   editSnapshot   = null;
   editModeActive = false;
+  updateHelpTooltip(editModeActive);
 
   box.contentEditable = "false";
   box.classList.remove("edit-mode");
@@ -1191,12 +1262,11 @@ function finishTranscriptEdit() {
   const footer = document.getElementById("editFooter");
   if (footer) footer.style.display = "none";
 
-  const btn = document.getElementById("editModeBtn");
-  if (btn) { btn.innerText = "✏️ Edit Text"; btn.className = "secondary"; }
+ const btn = document.getElementById("editModeBtn");
+if (btn) btn.style.display = "";
 
   renderTranscript();
 }
-
 function cancelTranscriptEdit() {
   if (!editSnapshot) return;
 
@@ -1214,16 +1284,11 @@ function cancelTranscriptEdit() {
   const footer = document.getElementById("editFooter");
   if (footer) footer.style.display = "none";
 
-  const btn = document.getElementById("editModeBtn");
-  if (btn) { btn.innerText = "✏️ Edit Text"; btn.className = "secondary"; }
+ const btn = document.getElementById("editModeBtn");
+if (btn) btn.style.display = ""; 
 
   renderTranscript();
 }
-
-
-
-
-
 
 // ── Mobile double-tap detection ───────────────────────────────────────────────
 let _lastTapEl = null, _lastTapTime = 0;
@@ -1262,28 +1327,6 @@ function renderTranscript() {
     return '<div class="transcript-sentence">' + wordsHtml + '</div>';
   }).join("");
 
-  // Sync the help tip with the current mode
-  const helpEl = document.querySelector(".transcript-help");
-  if (helpEl) {
-    if (editModeActive) {
-      helpEl.style.background = "#eff6ff";
-      helpEl.style.borderLeftColor = "#4f46e5";
-      helpEl.style.color = "#1e40af";
-      helpEl.innerHTML =
-        '✏️ <b>Double-click any word</b> to edit it inline. ' +
-        'Gap words (yellow) stay highlighted and their answers update automatically. ' +
-        '<b>Enter</b> to confirm · <b>Esc</b> to cancel · Clear a word to remove it and its gap.';
-    } else {
-      helpEl.style.background = "";
-      helpEl.style.borderLeftColor = "";
-      helpEl.style.color = "";
-      helpEl.innerHTML =
-        '💡 <b>Tap or click any word</b> to mark it as a gap. Tap a yellow word to remove the gap.';
-    }
-  }
-}
-
-
 
 document.addEventListener("click", function (e) {
   if (editModeActive) return;
@@ -1299,7 +1342,29 @@ document.addEventListener("click", function (e) {
   word.isGap = !word.isGap;
   target.classList.toggle("gap");
 });
+}
+function updateHelpTooltip(editModeActive) {
+  const helpEl = document.querySelector(".transcript-help");
+  if (!helpEl) return;
 
+  if (editModeActive) {
+    helpEl.style.background = "#eff6ff";
+    helpEl.style.borderLeftColor = "#4f46e5";
+    helpEl.style.color = "#1e40af";
+
+    helpEl.innerHTML =
+      '✏️ <b>Edit text directly in the transcript.</b><br>' +
+      'Gap words (yellow) stay highlighted and update automatically.<br>' +
+      '⚠️ <b>Replace full words when editing gaps.</b>';
+  } else {
+    helpEl.style.background = "";
+    helpEl.style.borderLeftColor = "";
+    helpEl.style.color = "";
+
+    helpEl.innerHTML =
+      '💡 <b>Tap or click any word</b> to mark it as a gap. Tap a yellow word to remove the gap.';
+  }
+}
 // ============================================================
 // ✨ MAKE IT HAPPEN — AI gap suggestion
 // ============================================================
