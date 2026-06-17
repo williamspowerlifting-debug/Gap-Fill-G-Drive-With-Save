@@ -456,16 +456,18 @@ function signOut() {
   updateAuthUI();
 }
 
-window.addEventListener('load', () => { setTimeout(initGoogleSignIn, 200); });
 
-// Attach Saved Exercises overlay listeners after DOM is ready
 window.addEventListener('load', () => {
-  try {
-    const overlay = document.getElementById('savedOverlay');
-    const closeBtn = document.getElementById('savedCloseBtn');
-    if (overlay) overlay.addEventListener('click', (e) => { if (e.target === overlay) window.closeSavedExercises && window.closeSavedExercises(); });
-    if (closeBtn) closeBtn.addEventListener('click', () => window.closeSavedExercises && window.closeSavedExercises());
-  } catch (e) { /* ignore */ }
+  let attempts = 0;
+  const tryInit = () => {
+    attempts++;
+    if (window.google && google.accounts && google.accounts.id) {
+      initGoogleSignIn();
+    } else if (attempts < 20) {
+      setTimeout(tryInit, 200);
+    }
+  };
+  setTimeout(tryInit, 100);
 });
 
 // Video state
