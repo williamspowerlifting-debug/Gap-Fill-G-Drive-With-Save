@@ -71,6 +71,14 @@ button.big{padding:16px 24px;font-size:17px;font-weight:600;}
   font-size:12px;line-height:22px;
 }
 
+/* Custom Highlight API style rule - sets gap styling without using span tags */
+::highlight(gap-highlight) {
+  background-color: #fde68a;
+  color: #78350f;
+  font-weight: 600;
+  border-radius: 4px;
+}
+
 .transcript-box.edit-mode {
   caret-color: #4f46e5;
   cursor: text;
@@ -78,7 +86,21 @@ button.big{padding:16px 24px;font-size:17px;font-weight:600;}
 .transcript-box.edit-mode .transcript-word {
   white-space: pre-wrap;
   cursor: text;
+  display: inline; /* Changed from inline-block to inline */
+  min-width: 1px;  /* Prevents element boxes from compressing to 0 width */
 }
+
+.transcript-box.edit-mode .transcript-word:empty::before {
+  content: "\200B"; /* Injects an un-deletable zero-width space layout mask */
+  display: inline;
+}
+
+.transcript-box.edit-mode .transcript-word.gap:empty {
+  min-width: 2ch;  /* Enforces a minimum width equal to two characters when empty */
+  display: inline-block;
+  vertical-align: bottom;
+}
+
 .transcript-box.edit-mode .transcript-word:hover {
   background: #dbeafe;
 }
@@ -1069,6 +1091,32 @@ function buildSentencesFromTranscript(data) {
 // ============================================================
 // ✏️ CONTENTEDITABLE TRANSCRIPT EDITOR
 // ============================================================
+// SELECTION BOUNDARY OBSERVER: Enforces bounding ranges when a word node goes empty
+document.getElementById("transcriptBox").addEventListener('keyup', function(e) {
+  if (!editModeActive || e.key !== 'Backspace') return;
+
+  const selection = window.getSelection();
+  if (!selection.rangeCount) return;
+
+  const range = selection.getRangeAt(0);
+  const container = range.startContainer;
+
+  // Track if our cursor dropped onto an element node instead of a text node
+  if (container.nodeType === Node.ELEMENT_NODE && container.classList.contains('transcript-sentence')) {
+    // Determine which child element matches the caret's index position
+    const targetNode = container.childNodes[range.startOffset - 1] || container.childNodes[range.startOffset];
+    
+    if (targetNode && targetNode.classList.contains('gap') && targetNode.textContent === '') {
+      // Forcefully snap the focus selection frame back inside our gap container bounds
+      const forcedRange = document.createRange();
+      forcedRange.selectNodeContents(targetNode);
+      forcedRange.collapse(true);
+      
+      selection.removeAllRanges();
+      selection.addRange(forcedRange);
+    }
+  }
+});
 
 function toggleEditMode() {
   if (editModeActive) return;
@@ -1112,6 +1160,8 @@ function renderTranscriptEditMode() {
   // This preserves undo history better than setting innerHTML
   box.removeEventListener("paste", _handleEditPaste);
   box.addEventListener("paste", _handleEditPaste);
+  box.removeEventListener("keydown", _handleEditBackspace);
+  box.addEventListener("keydown", _handleEditBackspace);
 }
 
 // Paste handler — defined once, referenced by name so we can remove it
@@ -1121,6 +1171,54 @@ function _handleEditPaste(e) {
     .getData("text/plain")
     .replace(/\r?\n/g, " "); // collapse newlines to spaces
   document.execCommand("insertText", false, text);
+}
+
+// Bug #1 fix: keep caret locked inside .transcript-word span when backspacing to empty.
+// Uses keydown (more reliably cancelable than beforeinput in Chrome) to intercept the
+// final backspace on a .transcript-word span. Inserts a U+200B placeholder so the span
+// never becomes truly empty and the caret stays inside the highlight.
+// U+200B is stripped in rebuildSentencesFromDOM() before saving.
+function _handleEditBackspace(e) {
+  if (e.key !== "Backspace") return;
+
+  const sel = window.getSelection();
+  if (!sel || !sel.rangeCount) return;
+
+  const range0 = sel.getRangeAt(0);
+
+  // Walk up from the caret anchor to find the nearest .transcript-word span
+  let node = range0.startContainer;
+  let span = null;
+  while (node && node !== document) {
+    if (node.nodeType === 1 && node.classList && node.classList.contains("transcript-word")) {
+      span = node;
+      break;
+    }
+    node = node.parentNode;
+  }
+  if (!span) return;
+
+  // Strip any accumulated ZWS to get the real character count
+  const realText = span.textContent.replace(/​/g, "");
+
+  // Intercept when exactly 1 real char remains (about to go empty)
+  // OR when the span is already empty / ZWS-only (caret re-entered from outside)
+  if (realText.length > 1) return;
+
+  // Prevent the browser from performing the deletion (and ejecting the caret)
+  e.preventDefault();
+
+  // If there is still 1 real char, clear it; ensure span holds only ZWS
+  span.textContent = "​";
+
+  // Pin caret to offset 0 inside the ZWS text node
+  const textNode = span.firstChild;
+  const r = document.createRange();
+  r.setStart(textNode, 0);
+  r.collapse(true);
+  const s = window.getSelection();
+  s.removeAllRanges();
+  s.addRange(r);
 }
 
 function rebuildSentencesFromDOM() {
@@ -1173,35 +1271,29 @@ box.querySelectorAll(".transcript-word").forEach(el => {
 });
 
     div.childNodes.forEach(node => {
-      if (node.nodeType === Node.ELEMENT_NODE &&
-          node.classList.contains("transcript-word")) {
+  if (node.nodeType === Node.ELEMENT_NODE && node.classList.contains("transcript-word")) {
 
-        // Get whatever the teacher typed inside this span
-        const rawText = node.innerText || node.textContent;
-        const tokens  = rawText.trim().split(/\s+/).filter(Boolean);
-        if (!tokens.length) return; // span emptied → drop the word
+    // FIX: Clean zero-width space placeholders before parsing text arrays
+    const rawText = (node.innerText || node.textContent).replace(/\u200B/g, '');
+    const tokens  = rawText.trim().split(/\s+/).filter(Boolean);
+    if (!tokens.length) return; // span emptied → drop the word
 
-        const wasGap =
-  node.classList.contains("gap") ||
-  node.getAttribute("data-gap") === "1";
-        const originalWordIdx = parseInt(node.getAttribute("data-word"), 10);
+    const wasGap = node.classList.contains("gap") || node.getAttribute("data-gap") === "1";
+    const originalWordIdx = parseInt(node.getAttribute("data-word"), 10);
 
-        tokens.forEach((tok, ti) => {
-          if (ti === 0) {
-            // First (or only) token: inherits gap status.
-            // The new text IS the new answer — gap stays if it was a gap.
-            newWords.push({ text: tok, isGap: wasGap, time: 0 });
-          } else {
-            // Extra tokens the teacher typed inside the span → plain words
-            newWords.push({ text: tok, isGap: false, time: 0 });
-          }
-        });
+    tokens.forEach((tok, ti) => {
+      if (ti === 0) {
+        newWords.push({ text: tok, isGap: wasGap, time: 0 });
+      } else {
+        newWords.push({ text: tok, isGap: false, time: 0 });
+      }
+    });
 
-      } else if (node.nodeType === Node.TEXT_NODE) {
-
-  const tokens = node.textContent.trim().split(/\s+/).filter(Boolean);
-
-  const prev = node.previousSibling;
+  } else if (node.nodeType === Node.TEXT_NODE) {
+    // FIX: Clean text nodes as well
+    const cleanedText = node.textContent.replace(/\u200B/g, '');
+    const tokens = cleanedText.trim().split(/\s+/).filter(Boolean);
+    const prev = node.previousSibling;
 
   const inheritGap =
     prev &&
@@ -1249,6 +1341,7 @@ function finishTranscriptEdit() {
 );
   const box = document.getElementById("transcriptBox");
   box.removeEventListener("paste", _handleEditPaste);
+  box.removeEventListener("keydown", _handleEditBackspace);
 
   rebuildSentencesFromDOM();
 
@@ -1274,6 +1367,7 @@ function cancelTranscriptEdit() {
   const box = document.getElementById("transcriptBox");
   box.removeEventListener("paste", _handleEditPaste);
 
+  box.removeEventListener("keydown", _handleEditBackspace);
   sentences      = JSON.parse(JSON.stringify(editSnapshot));
   editSnapshot   = null;
   editModeActive = false;
@@ -1327,21 +1421,6 @@ function renderTranscript() {
     return '<div class="transcript-sentence">' + wordsHtml + '</div>';
   }).join("");
 
-
-document.addEventListener("click", function (e) {
-  if (editModeActive) return;
-  const target = e.target;
-  if (!target.classList || !target.classList.contains("transcript-word")) return;
-  const sentIdx = parseInt(target.getAttribute("data-sent"));
-  const wordIdx = parseInt(target.getAttribute("data-word"));
-  if (isNaN(sentIdx) || isNaN(wordIdx)) return;
-  const word = sentences[sentIdx] && sentences[sentIdx].words[wordIdx];
-  if (!word) return;
-  const clean = word.text.replace(/[^\w']/g, "");
-  if (!clean) return;
-  word.isGap = !word.isGap;
-  target.classList.toggle("gap");
-});
 }
 function updateHelpTooltip(editModeActive) {
   const helpEl = document.querySelector(".transcript-help");
@@ -2165,6 +2244,35 @@ function showAnswers() {
     }
   })();
 })();
+// GLOBAL EVENT DELEGATION: Binds exactly once at the document level
+// This survives any future full innerHTML rewrites or edit updates
+document.addEventListener("click", function (e) {
+  if (editModeActive) return; // Ignore if teacher is actively fixing text spelling
+  
+  const target = e.target;
+  if (!target || !target.classList || !target.classList.contains("transcript-word")) return;
+  
+  const sentIdx = parseInt(target.getAttribute("data-sent"), 10);
+  const wordIdx = parseInt(target.getAttribute("data-word"), 10);
+  if (isNaN(sentIdx) || isNaN(wordIdx)) return;
+
+  if (sentences[sentIdx] && sentences[sentIdx].words[wordIdx]) {
+    const wordObj = sentences[sentIdx].words[wordIdx];
+    
+    // Toggle the data memory state directly
+    wordObj.isGap = !wordObj.isGap;
+    
+    // Update the UI immediately without destroying or re-rendering any nodes
+    if (wordObj.isGap) {
+      target.classList.add("gap");
+      target.setAttribute("data-gap", "1");
+    } else {
+      target.classList.remove("gap");
+      target.setAttribute("data-gap", "0");
+    }
+  }
+});
+
 </script>
 
 </body>
