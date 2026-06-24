@@ -383,6 +383,7 @@ video, iframe.video-player{
     <div style="margin-bottom:14px;">
       <label for="exerciseName">Exercise name (for your saved exercises)</label>
       <input type="text" id="exerciseName" placeholder="e.g. Unit 3 — Shopping dialogue" style="margin-bottom:8px;">
+      <input type="text" id="exerciseName" placeholder="e.g. Unit 3 — Shopping dialogue" style="margin-bottom:8px;" oninput="saveLocalProgress()">
     </div>
 
     <button class="primary-blue full" onclick="previewExercise()">👀 Preview</button>
@@ -456,6 +457,83 @@ video, iframe.video-player{
 // 🌐 Global state
 // ============================================================
 const WORKER = window.WORKER_URL;
+
+// ============================================================
+// LOCAL STORAGE AUTO-SAVE PROGRESS RECOVERY 💾
+// ============================================================
+function saveLocalProgress() {
+  if (!sentences || sentences.length === 0) return;
+  
+  const progressData = {
+    videoMode: videoMode,
+    bunnyGuid: bunnyGuid,
+    bunnyDirectUrl: bunnyDirectUrl,
+    bunnyEmbedUrl: bunnyEmbedUrl,
+    externalVideoUrl: externalVideoUrl,
+    currentExerciseId: currentExerciseId,
+    exerciseName: document.getElementById("exerciseName")?.value || "",
+    sentences: sentences,
+    lastSaved: Date.now()
+  };
+  
+  localStorage.setItem("listening_exercise_scratchpad", JSON.stringify(progressData));
+}
+
+function checkAndRestoreLocalProgress() {
+  const rawData = localStorage.getItem("listening_exercise_scratchpad");
+  if (!rawData) return;
+
+  try {
+    const data = JSON.parse(rawData);
+    if (!data.sentences || data.sentences.length === 0) return;
+
+    // Format human-friendly time since the last active modification
+    const minutesAgo = Math.round((Date.now() - data.lastSaved) / 60000);
+    const timeString = minutesAgo < 1 ? "just a moment ago" : `${minutesAgo} minute${minutesAgo !== 1 ? 's' : ''} ago`;
+
+    if (confirm(`Unsaved progress found from ${timeString}. Would you like to restore it and keep working?`)) {
+      // Restore all global application states
+      videoMode = data.videoMode;
+      bunnyGuid = data.bunnyGuid;
+      bunnyDirectUrl = data.bunnyDirectUrl;
+      bunnyEmbedUrl = data.bunnyEmbedUrl;
+      externalVideoUrl = data.externalVideoUrl;
+      currentExerciseId = data.currentExerciseId;
+      sentences = data.sentences;
+
+      // Restore the exercise text fields
+      const nameInput = document.getElementById("exerciseName");
+      if (nameInput) nameInput.value = data.exerciseName || "";
+
+      // Spin up the video container matching the stored target
+      const box = document.getElementById("videoBox");
+      if (videoMode === "mp4" && externalVideoUrl) {
+        box.innerHTML = '<video id="builderPlayer" class="video-player" controls><source src="' + escapeAttr(externalVideoUrl) + '"></video>';
+        builderPlayer = document.getElementById("builderPlayer");
+      } else if (videoMode === "bunny" && bunnyEmbedUrl) {
+        box.innerHTML = '<iframe id="builderPlayer" class="video-player" src="' + bunnyEmbedUrl + '?autoplay=false" allowfullscreen allow="autoplay;encrypted-media"></iframe>';
+      }
+
+      // Unroll the hidden dashboard layout workflows directly to editing
+      revealStep("step2Card");
+      revealStep("step3Card");
+      revealStep("step4Card");
+      revealStep("step5Card");
+      renderTranscript();
+    } else {
+      // Clear out database if they deliberately choose to wipe and start fresh
+      localStorage.removeItem("listening_exercise_scratchpad");
+    }
+  } catch (e) {
+    console.warn("Failed to parse progress recovery cache:", e);
+  }
+}
+
+// Clear backup cache when the user deliberately clears or completely finishes saving
+function clearLocalProgressCache() {
+  localStorage.removeItem("listening_exercise_scratchpad");
+}
+
 
 // Teacher identity — persistent per browser. Prefer Google login when available.
 function getTeacherId() {
@@ -619,17 +697,21 @@ function signOut() {
 
 
 window.addEventListener('load', () => {
-  let attempts = 0;
-  const tryInit = () => {
-    attempts++;
-    if (window.google && google.accounts && google.accounts.id) {
-      initGoogleSignIn();
-    } else if (attempts < 20) {
-      setTimeout(tryInit, 200);
-    }
-  };
-  setTimeout(tryInit, 100);
+ let attempts = 0;
+ const tryInit = () => {
+ attempts++;
+ if (window.google && google.accounts && google.accounts.id) {
+ initGoogleSignIn();
+ } else if (attempts < 20) {
+ setTimeout(tryInit, 200);
+ }
+ };
+ setTimeout(tryInit, 100);
+
+ // 💡 HOOK 2: Run session checker once window layout finishes bootstrapping
+ setTimeout(checkAndRestoreLocalProgress, 500);
 });
+
 
 // Video state
 let videoMode = null;
@@ -1120,49 +1202,62 @@ document.getElementById("transcriptBox").addEventListener('keyup', function(e) {
 
 function toggleEditMode() {
   if (editModeActive) return;
-
   editModeActive = true;
   updateHelpTooltip(editModeActive);
-
   const btn = document.getElementById("editModeBtn");
   const footer = document.getElementById("editFooter");
-
   editSnapshot = JSON.parse(JSON.stringify(sentences));
-
   if (btn) btn.style.display = "none";
   if (footer) footer.style.display = "flex";
-
+  
+  // Call the function to switch the DOM into editable mode
   renderTranscriptEditMode();
 }
 
 function renderTranscriptEditMode() {
   const box = document.getElementById("transcriptBox");
-  box.contentEditable = "true";
+  box.contentEditable = "true"; // Unlock the editing region 🔓
   box.classList.add("edit-mode");
-  box.setAttribute("spellcheck", "false");
-
-  // Render each word as a span; gap spans keep their highlight
-  box.innerHTML = sentences.map((s, si) =>
-    '<div class="transcript-sentence" data-sent="' + si + '">' +
-    s.words.map((w, wi) => {
-      const cls = "transcript-word" + (w.isGap ? " gap" : "");
-      return '<span class="' + cls + '"' +
-             ' data-sent="' + si + '"' +
-             ' data-word="' + wi + '"' +
-             ' data-gap="'  + (w.isGap ? "1" : "0") + '">' +
-             escapeHtml(w.text) +
-             '</span>';
-    }).join(" ") +
-    '</div>'
-  ).join("");
-
-  // Intercept paste: strip all HTML, insert plain text only
-  // This preserves undo history better than setting innerHTML
-  box.removeEventListener("paste", _handleEditPaste);
+  
+  // Attach safe key and paste filters so browser defaults don't break HTML structures
   box.addEventListener("paste", _handleEditPaste);
-  box.removeEventListener("keydown", _handleEditBackspace);
   box.addEventListener("keydown", _handleEditBackspace);
+
+  if (!sentences.length) { 
+    box.innerHTML = "<div></div>"; 
+    return; 
+  }
+
+  // Render text inside structural containers so our linear timing walker can track attributes
+  box.innerHTML = sentences.map((s, si) => {
+    const wordsHtml = s.words.map((w, wi) => {
+      const cls = "transcript-word" + (w.isGap ? " gap" : "");
+      return '<span class="' + cls + '" data-sent="' + si + '" data-word="' + wi + '">' + escapeHtml(w.text) + '</span>';
+    }).join(" ");
+    
+    return '<div class="transcript-sentence" data-sent="' + si + '">' + wordsHtml + '</div>';
+  }).join("");
 }
+
+function renderTranscript() {
+  const box = document.getElementById("transcriptBox");
+  box.contentEditable = "false"; // Lock it down when not in edit mode 🔒
+  box.classList.remove("edit-mode");
+  
+  if (!sentences.length) { box.innerHTML = "<i>No transcript.</i>"; return; }
+  
+  box.innerHTML = sentences.map((s, si) => {
+    const wordsHtml = s.words.map((w, wi) => {
+      const cls = "transcript-word" + (w.isGap ? " gap" : "");
+      const id = "tw_" + si + "_" + wi;
+      return '<span class="' + cls + '" id="' + id + '" data-sent="' + si +
+      '" data-word="' + wi + '">' + escapeHtml(w.text) + '</span>';
+    }).join(" ");
+    return '<div class="transcript-sentence">' + wordsHtml + '</div>';
+  }).join("");
+}
+
+
 
 // Paste handler — defined once, referenced by name so we can remove it
 function _handleEditPaste(e) {
@@ -1360,7 +1455,6 @@ function rebuildSentencesFromDOM() {
   }
 }
 
-
 function finishTranscriptEdit() {
   // Remove paste listener before leaving edit mode
   console.log(
@@ -1386,6 +1480,8 @@ function finishTranscriptEdit() {
 if (btn) btn.style.display = "";
 
   renderTranscript();
+  // 💡 SAVE HERE INSTEAD: Silently backup the progress data now that editing is finished
+  saveLocalProgress();
 }
 function cancelTranscriptEdit() {
   if (!editSnapshot) return;
@@ -1685,6 +1781,8 @@ async function saveExerciseManually() {
 
     saveStatus.className = "status success";
     saveStatus.innerText = "✅ Exercise saved!";
+    // 💡 HOOK 3: Clear the local safety scratchpad upon full server synchronization
+  clearLocalProgressCache();
   }
   catch (e) {
     saveStatus.className = "status error";
