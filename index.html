@@ -1018,7 +1018,7 @@ async function autoTranscribe() {
 
 async function pollTranscriptJob(jobId) {
   const status = document.getElementById("transcribeStatus");
-  for (let i = 0; i < 90; i++) {
+  for (let i = 0; i < 180; i++) {
     await new Promise(r => setTimeout(r, 2000));
     try {
       const res = await fetch(WORKER + "/transcribe-status?jobId=" + jobId);
