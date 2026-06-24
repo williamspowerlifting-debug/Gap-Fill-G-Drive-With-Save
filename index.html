@@ -1222,117 +1222,144 @@ function _handleEditBackspace(e) {
 }
 
 function rebuildSentencesFromDOM() {
-   const box = document.getElementById("transcriptBox");
+  const box = document.getElementById("transcriptBox");
+  const flatWords = [];
   
-box.querySelectorAll(".gap").forEach(el => {
-  el.setAttribute("data-gap", "1");
-});
-// Convert Chrome-generated formatting wrappers back into gap spans
-box.querySelectorAll(
-  'font, span[style*="background-color"]'
-).forEach(el => {
-
-  const text = el.textContent.trim();
-  if (!text) return;
-
-  const gapSpan = document.createElement("span");
-  gapSpan.className = "transcript-word gap";
-  gapSpan.setAttribute("data-gap", "1");
-  gapSpan.textContent = text;
-
-  el.replaceWith(gapSpan);
-});
-console.log("AFTER NORMALIZATION");
-box.querySelectorAll(".transcript-word").forEach(el => {
-  console.log(
-    el.textContent,
-    "gap:",
-    el.classList.contains("gap"),
-    "data-gap:",
-    el.getAttribute("data-gap")
-  );
-});
-  const sentenceDivs = box.querySelectorAll(".transcript-sentence");
-  const rebuilt = [];
-
-  sentenceDivs.forEach((div, si) => {
-    const original = sentences[si] || { startTime: 0, endTime: 0 };
-    const newWords = [];
-
-    div.querySelectorAll("font").forEach(fontEl => {
-
-  const gapSpan = document.createElement("span");
-
-  gapSpan.className = "transcript-word gap";
-  gapSpan.setAttribute("data-gap", "1");
-  gapSpan.textContent = fontEl.textContent;
-
-  fontEl.replaceWith(gapSpan);
-});
-
-    div.childNodes.forEach(node => {
-  if (node.nodeType === Node.ELEMENT_NODE && node.classList.contains("transcript-word")) {
-
-    // FIX: Clean zero-width space placeholders before parsing text arrays
-    const rawText = (node.innerText || node.textContent).replace(/\u200B/g, '');
-    const tokens  = rawText.trim().split(/\s+/).filter(Boolean);
-    if (!tokens.length) return; // span emptied → drop the word
-
-    const wasGap = node.classList.contains("gap") || node.getAttribute("data-gap") === "1";
-    const originalWordIdx = parseInt(node.getAttribute("data-word"), 10);
-
-    tokens.forEach((tok, ti) => {
-      if (ti === 0) {
-        newWords.push({ text: tok, isGap: wasGap, time: 0 });
-      } else {
-        newWords.push({ text: tok, isGap: false, time: 0 });
-      }
-    });
-
-  } else if (node.nodeType === Node.TEXT_NODE) {
-    // FIX: Clean text nodes as well
-    const cleanedText = node.textContent.replace(/\u200B/g, '');
-    const tokens = cleanedText.trim().split(/\s+/).filter(Boolean);
-    const prev = node.previousSibling;
-
-  const inheritGap =
-    prev &&
-    prev.nodeType === Node.ELEMENT_NODE &&
-    (
-      prev.classList?.contains("gap") ||
-      prev.tagName === "FONT"
-    );
-
-  tokens.forEach(tok =>
-    newWords.push({
-      text: tok,
-      isGap: inheritGap,
-      time: 0
-    })
-  );
-}
-console.log(
-  JSON.stringify(
-    newWords.map(w => ({
-      text: w.text,
-      gap: w.isGap
-    }))
-  )
-); });
-
-    if (newWords.length) {
-      rebuilt.push({
-        words:        newWords,
-        startTime:    original.startTime || 0,
-        endTime:      original.endTime   || 0,
-        originalText: newWords.map(w => w.text).join(" ")
+  // Helper to parse plain text tokens and retain structural flags
+  function processTextTokens(text, isGap, originalSentIdx) {
+    const tokens = text.replace(/\u200B/g, '').trim().split(/\s+/).filter(Boolean);
+    tokens.forEach(tok => {
+      flatWords.push({
+        text: tok,
+        isGap: isGap,
+        sentIdx: originalSentIdx
       });
+    });
+  }
+
+  // Walk linearly through all elements and text nodes inside the container
+  const walker = document.createTreeWalker(box, NodeFilter.SHOW_TEXT | NodeFilter.SHOW_ELEMENT, null, false);
+  let currentNode;
+  
+  while (currentNode = walker.nextNode()) {
+    if (currentNode.nodeType === Node.ELEMENT_NODE) {
+      if (currentNode.tagName === "FONT" || currentNode.style?.backgroundColor) {
+        currentNode.classList.add("gap");
+      }
+    } else if (currentNode.nodeType === Node.TEXT_NODE) {
+      const parent = currentNode.parentNode;
+      if (parent === box && !currentNode.textContent.trim()) continue;
+      
+      let isGap = false;
+      let sentIdx = null;
+      
+      let p = parent;
+      while (p && p !== box) {
+        if (p.classList && p.classList.contains("transcript-word")) {
+          if (p.classList.contains("gap") || p.getAttribute("data-gap") === "1" || p.tagName === "FONT") {
+            isGap = true;
+          }
+          if (p.hasAttribute("data-sent")) {
+            sentIdx = parseInt(p.getAttribute("data-sent"), 10);
+          }
+          break;
+        }
+        if (p.classList && p.classList.contains("transcript-sentence")) {
+          if (p.hasAttribute("data-sent")) {
+            sentIdx = parseInt(p.getAttribute("data-sent"), 10);
+          }
+          break;
+        }
+        p = p.parentNode;
+      }
+      
+      processTextTokens(currentNode.textContent, isGap, sentIdx);
     }
-    // Empty sentence (teacher deleted all words in a line) is dropped silently
+  }
+
+  if (flatWords.length === 0) return;
+
+  // Fill in missing timeline positions for newly typed text based on proximity
+  let lastValidSentIdx = 0;
+  for (let i = 0; i < flatWords.length; i++) {
+    if (flatWords[i].sentIdx !== null && !isNaN(flatWords[i].sentIdx)) {
+      lastValidSentIdx = flatWords[i].sentIdx;
+    } else {
+      flatWords[i].sentIdx = lastValidSentIdx;
+    }
+  }
+
+  // Pre-populate empty baseline structures matching original counts
+  const newSentences = [];
+  for (let i = 0; i < sentences.length; i++) {
+    newSentences.push({
+      words: [],
+      startTime: sentences[i].startTime,
+      endTime: sentences[i].endTime,
+      originalText: ""
+    });
+  }
+
+  // Distribute extracted text items back into their baseline blocks
+  flatWords.forEach(w => {
+    let idx = w.sentIdx;
+    if (idx >= newSentences.length) idx = newSentences.length - 1;
+    if (idx < 0) idx = 0;
+    newSentences[idx].words.push({
+      text: w.text,
+      isGap: w.isGap,
+      time: 0
+    });
   });
 
-  if (rebuilt.length) sentences = rebuilt;
+  // 💡 FIX: Accumulate and stretch timeline windows over consecutive empty segments
+  const finalSentences = [];
+  
+  for (let i = 0; i < newSentences.length; i++) {
+    const current = newSentences[i];
+    
+    if (current.words.length > 0) {
+      current.originalText = current.words.map(w => w.text).join(" ");
+      finalSentences.push(current);
+    } else {
+      // Sentence was removed. Pass its timestamp duration to the closest valid sentence block
+      if (finalSentences.length > 0) {
+        // Stretch the preceding active sentence forward to absorb this gap
+        finalSentences[finalSentences.length - 1].endTime = Math.max(
+          finalSentences[finalSentences.length - 1].endTime, 
+          current.endTime
+        );
+      } else {
+        // If the first sentences were deleted, find the first available active sentence and stretch it backward
+        let nextValid = null;
+        for (let j = i + 1; j < newSentences.length; j++) {
+          if (newSentences[j].words.length > 0) {
+            nextValid = newSentences[j];
+            break;
+          }
+        }
+        if (nextValid) {
+          nextValid.startTime = Math.min(nextValid.startTime, current.startTime);
+        }
+      }
+    }
+  }
+
+  // 💡 FIX: Stitch the timeline together continuously to eliminate any remaining cutting bugs
+  for (let i = 0; i < finalSentences.length; i++) {
+    if (i < finalSentences.length - 1) {
+      // Force current block to play perfectly up until the exact millisecond the next starts
+      finalSentences[i].endTime = Math.max(finalSentences[i].endTime, finalSentences[i + 1].startTime);
+    } else {
+      finalSentences[i].endTime = finalSentences[i].endTime + 1.5;
+    }
+  }
+
+  if (finalSentences.length) {
+    sentences = finalSentences;
+  }
 }
+
 
 function finishTranscriptEdit() {
   // Remove paste listener before leaving edit mode
