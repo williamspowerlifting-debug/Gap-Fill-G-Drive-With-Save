@@ -957,10 +957,12 @@ async function useGoogleDriveLink() {
       throw new Error("Could not start transcription.");
     }
 
-    status.className = "status success";
-    status.innerText = "✅ Transcription started...";
+   status.className = "status success";
+status.innerText = "✅ Transcribing...";
 
-    pollTranscriptJob(data.jobId);
+revealStep("step2Card");
+
+await pollTranscriptJob(data.jobId);
 
   } catch (err) {
 
@@ -1796,7 +1798,7 @@ async function saveExerciseManually() {
 
     currentExerciseId = data.exerciseId;
 
-    saveStatus.className = "status success";
+    save
     saveStatus.innerText = "✅ Exercise saved!";
     // 💡 HOOK 3: Clear the local safety scratchpad upon full server synchronization
   clearLocalProgressCache();
@@ -1947,7 +1949,7 @@ async function openSavedExercise(exerciseId) {
 
     const saveStatus = document.getElementById("saveStatus");
     if (saveStatus) {
-      saveStatus.className = "status success";
+      save
       saveStatus.innerText = "✅ Exercise loaded. Make changes and save again to update.";
     }
 
