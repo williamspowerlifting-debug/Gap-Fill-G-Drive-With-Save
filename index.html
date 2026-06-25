@@ -10,7 +10,7 @@
 
 <script src="https://cdn.jsdelivr.net/npm/lz-string@1.5.0/libs/lz-string.min.js"></script>
 <script>
-  window.WORKER_URL = "https://gapfill-ai-googledrive.williamspowerlifting.WORKERs.dev";
+  window.WORKER_URL = "https://gapfill-ai-googledrive.williamspowerlifting.workers.dev";
 </script>
 
 <style>
@@ -453,28 +453,10 @@ video, iframe.video-player{
 </div>
 
 <script>
-  window.WORKER = "https://gapfill-ai-googledrive.williamspowerlifting.workers.dev";
-  console.log("🔥 SCRIPT LOADED");
 // ============================================================
 // 🌐 Global state
 // ============================================================
 const WORKER = window.WORKER_URL;
-
-// Video state
-let videoMode = null;
-let bunnyGuid = null;
-let bunnyDirectUrl = null;
-let bunnyEmbedUrl = null;
-let externalVideoUrl = null;
-let builderPlayer = null;
-
-// Transcript state
-let sentences = [];
-let editModeActive = false;
-
-// ============================================================
-// 🔁 Routing — runs after all functions are defined (see bottom of page)
-// ============================================================
 
 // ============================================================
 // LOCAL STORAGE AUTO-SAVE PROGRESS RECOVERY 💾
@@ -841,26 +823,6 @@ async function handleFileUpload(file) {
   }
 }
 
-function showVideoPlayer() {
-  const box = document.getElementById("videoBox");
-
-  if (videoMode === "mp4") {
-    box.innerHTML =
-      '<video id="builderPlayer" class="video-player" controls><source src="' +
-      escapeAttr(externalVideoUrl) +
-      '"></video>';
-
-    builderPlayer = document.getElementById("builderPlayer");
-
-  } else if (videoMode === "bunny") {
-
-    box.innerHTML =
-      '<iframe id="builderPlayer" class="video-player" src="' +
-      bunnyEmbedUrl +
-      '?autoplay=false" allowfullscreen allow="autoplay;encrypted-media"></iframe>';
-  }
-}
-
 async function waitForBunnyReady() {
   const status = document.getElementById("transcribeStatus");
   status.className = "status";
@@ -929,120 +891,84 @@ function useVideoLink() {
   autoTranscribe();
 }
 
-function extractGoogleDriveFileId(url) {
-  const m1 = url.match(/\/d\/([a-zA-Z0-9_-]+)/);
-  const m2 = url.match(/[?&]id=([a-zA-Z0-9_-]+)/);
-
-  if (m1) return m1[1];
-  if (m2) return m2[1];
-
-  return null;
-}
-
+// ============================================================
+// ☁️ GOOGLE DRIVE IMPORT
+// ============================================================
 async function useGoogleDriveLink() {
   const rawUrl = document.getElementById("driveUrl").value.trim();
-
-  if (!rawUrl) {
-    alert("Please paste a Google Drive link.");
-    return;
-  }
-
+  if (!rawUrl) { alert("Please paste a Google Drive link."); return; }
   if (!rawUrl.includes("drive.google.com")) {
     alert("That doesn't look like a Google Drive link.");
     return;
   }
-
-  const fileId = extractGoogleDriveFileId(rawUrl);
-
-  if (!fileId) {
-    alert("Could not extract Google Drive file ID.");
-    return;
-  }
-
-  const directUrl =
-    `https://drive.usercontent.google.com/download?id=${fileId}&export=download&confirm=t`;
-    // Start Bunny import in background
-const bunnyPromise = fetch(WORKER + "/gdrive-to-bunny", {
-  method: "POST",
-  headers: {
-    "Content-Type": "application/json"
-  },
-  body: JSON.stringify({
-    driveUrl: rawUrl,
-    title: "Google Drive import"
-  })
-});
 
   const status = document.getElementById("uploadStatus");
   const progressWrap = document.getElementById("progressWrap");
   const progressBar = document.getElementById("progressBar");
   const btn = document.getElementById("pasteImportBtn");
 
+  status.className = "status";
+  status.innerText = "☁️ Importing from Google Drive… (large files may take 1–3 minutes)";
+  progressWrap.style.display = "block";
+  progressBar.style.width = "30%";
+  progressBar.innerText = "Importing…";
   if (btn) btn.disabled = true;
 
-  status.className = "status";
-  status.innerText = "🎤 Sending video directly to transcription service...";
-
-  progressWrap.style.display = "block";
-  progressBar.style.width = "100%";
-  progressBar.innerText = "Starting...";
+  let fakePct = 30;
+  const fakeTimer = setInterval(() => {
+    if (fakePct < 85) { fakePct += 3; progressBar.style.width = fakePct + "%"; }
+  }, 2000);
 
   try {
-
-    const res = await fetch(WORKER + "/transcribe", {
+    const res = await fetch(WORKER + "/gdrive-to-bunny", {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({
-        audioUrl: directUrl
-      })
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ driveUrl: rawUrl, title: "Google Drive import" })
     });
 
-    const data = await res.json();
-
-    if (!data.jobId) {
-      throw new Error("Could not start transcription.");
+    if (!res.ok) {
+      const errBody = await res.text().catch(() => res.status);
+      let msg = "Import failed: " + errBody;
+      try { msg = "Import failed: " + JSON.parse(errBody).error; } catch {}
+      throw new Error(msg);
     }
-   // Wait for Bunny import to finish
-const bunnyRes = await bunnyPromise;
 
-if (bunnyRes.ok) {
+    const data = await res.json();
+    bunnyGuid = data.guid;
+    bunnyEmbedUrl = "https://iframe.mediadelivery.net/embed/" + data.libraryId + "/" + bunnyGuid;
+    videoMode = "bunny";
 
-  const bunnyData = await bunnyRes.json();
-
-  bunnyGuid = bunnyData.guid;
-
-  bunnyEmbedUrl =
-    "https://iframe.mediadelivery.net/embed/" +
-    bunnyData.libraryId +
-    "/" +
-    bunnyGuid;
-
-  videoMode = "bunny";
-
-  showVideoPlayer();
-}
+    clearInterval(fakeTimer);
+    progressBar.style.width = "100%";
+    progressBar.innerText = "Done";
     status.className = "status success";
-status.innerText = "✅ Video imported. Transcribing...";
+    status.innerText = "✅ Imported from Google Drive! Processing & transcribing…";
 
-revealStep("step2Card");
-
-await pollTranscriptJob(data.jobId);
+    revealStep("step2Card");
+    await waitForBunnyReady();
+    await autoTranscribe();
 
   } catch (err) {
-
+    clearInterval(fakeTimer);
     console.error(err);
-
     status.className = "status error";
     status.innerText = "❌ " + err.message;
-
     progressWrap.style.display = "none";
-
     if (btn) btn.disabled = false;
   }
 }
 
+function showVideoPlayer() {
+  const box = document.getElementById("videoBox");
+  if (videoMode === "mp4") {
+    box.innerHTML = '<video id="builderPlayer" class="video-player" controls><source src="' +
+      escapeAttr(externalVideoUrl) + '"></video>';
+    builderPlayer = document.getElementById("builderPlayer");
+  } else if (videoMode === "bunny") {
+    box.innerHTML = '<iframe id="builderPlayer" class="video-player" src="' + bunnyEmbedUrl +
+      '?autoplay=false" allowfullscreen allow="autoplay;encrypted-media"></iframe>';
+  }
+}
 
 function revealStep(id) { document.getElementById(id).style.display = "block"; }
 
@@ -1057,7 +983,6 @@ function escapeHtml(s) { return escapeAttr(s); }
 // 📝 AUTO-TRANSCRIBE
 // ============================================================
 async function autoTranscribe() {
-  console.log("AUTO TRANSCRIBE STARTED");
   const status = document.getElementById("transcribeStatus");
   let audioUrl;
   if (videoMode === "bunny") audioUrl = bunnyDirectUrl;
@@ -1098,7 +1023,6 @@ async function pollTranscriptJob(jobId) {
     try {
       const res = await fetch(WORKER + "/transcribe-status?jobId=" + jobId);
       const data = await res.json();
-      console.log("TRANSCRIBE RESPONSE:", data);
       if (data.done) { buildSentencesFromTranscript(data); return; }
       status.innerText = "⏳ Transcribing... (" + ((i + 1) * 2) + "s)";
     } catch {}
@@ -1598,6 +1522,8 @@ function handleWordTouchEnd(e, si, wi) {
     _lastTapTime = now;
   }
 }
+
+
 
 // ============================================================
 // 📝 TRANSCRIPT RENDER & CLICK-TO-TOGGLE GAPS
@@ -2473,6 +2399,6 @@ document.addEventListener("click", function (e) {
 });
 
 </script>
- 
+
 </body>
 </html>
