@@ -1039,6 +1039,7 @@ function escapeHtml(s) { return escapeAttr(s); }
 // 📝 AUTO-TRANSCRIBE
 // ============================================================
 async function autoTranscribe() {
+  console.log("AUTO TRANSCRIBE STARTED");
   const status = document.getElementById("transcribeStatus");
   let audioUrl;
   if (videoMode === "bunny") audioUrl = bunnyDirectUrl;
