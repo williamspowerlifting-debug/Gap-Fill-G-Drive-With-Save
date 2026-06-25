@@ -952,7 +952,11 @@ async function useGoogleDriveLink() {
     });
 
     const data = await res.json();
-
+// Save system structural parameters to global states
+    bunnyGuid = data.guid;
+    bunnyEmbedUrl = "https://mediadelivery.net" + data.libraryId + "/" + bunnyGuid;
+    videoMode = "bunny";
+    
     if (!data.jobId) {
       throw new Error("Could not start transcription.");
     }
