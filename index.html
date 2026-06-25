@@ -458,7 +458,23 @@ video, iframe.video-player{
 // ============================================================
 // 🌐 Global state
 // ============================================================
+const WORKER = window.WORKER_URL;
 
+// Video state
+let videoMode = null;
+let bunnyGuid = null;
+let bunnyDirectUrl = null;
+let bunnyEmbedUrl = null;
+let externalVideoUrl = null;
+let builderPlayer = null;
+
+// Transcript state
+let sentences = [];
+let editModeActive = false;
+
+// ============================================================
+// 🔁 Routing — runs after all functions are defined (see bottom of page)
+// ============================================================
 
 // ============================================================
 // LOCAL STORAGE AUTO-SAVE PROGRESS RECOVERY 💾
