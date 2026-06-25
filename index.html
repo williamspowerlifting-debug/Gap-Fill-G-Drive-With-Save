@@ -457,7 +457,7 @@ video, iframe.video-player{
 // ============================================================
 // 🌐 Global state
 // ============================================================
-const WORKER = window.WORKER_URL;
+
 
 // ============================================================
 // LOCAL STORAGE AUTO-SAVE PROGRESS RECOVERY 💾
@@ -2462,18 +2462,5 @@ document.addEventListener("click", function (e) {
   let videoMode;
 </script>
 
-<script>
-  // 2. functions
-  async function autoTranscribe() {}
-  async function pollTranscriptJob() {}
-</script>
-
-<script>
-  // 3. event bindings / startup
-  document.getElementById("transcribeBtn")
-    ?.addEventListener("click", autoTranscribe);
-
-  console.log("🔥 APP READY");
-</script>
 </body>
 </html>
