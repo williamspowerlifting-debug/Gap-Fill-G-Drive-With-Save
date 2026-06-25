@@ -957,6 +957,12 @@ async function useGoogleDriveLink() {
     bunnyEmbedUrl = "https://mediadelivery.net" + data.libraryId + "/" + bunnyGuid;
     videoMode = "bunny";
     
+    clearInterval(fakeTimer);
+    progressBar.style.width = "100%";
+    progressBar.innerText = "Handoff Successful!";
+    status.className = "status success";
+    status.innerText = "✅ Cloud handshake complete! Processing video & transcribing audio tracks...";
+    
     if (!data.jobId) {
       throw new Error("Could not start transcription.");
     }
