@@ -10,7 +10,7 @@
 
 <script src="https://cdn.jsdelivr.net/npm/lz-string@1.5.0/libs/lz-string.min.js"></script>
 <script>
-  window.WORKER_URL = "https://gapfill-ai-googledrive.williamspowerlifting.workers.dev";
+  window.window.WORKER_URL = "https://gapfill-ai-googledrive.williamspowerlifting.window.WORKERs.dev";
 </script>
 
 <style>
@@ -567,7 +567,7 @@ window.openSavedExercises = async function fallbackOpenSavedExercises() {
     if (overlay) overlay.classList.add("show");
     if (list) list.innerHTML = '<p style="color:#999;">Loading…</p>';
 
-    const res = await fetch(WORKER + "/list-teacher-exercises?teacherId=" + encodeURIComponent(getTeacherId()));
+    const res = await fetch(window.WORKER + "/list-teacher-exercises?teacherId=" + encodeURIComponent(getTeacherId()));
     if (!res.ok) throw new Error("Could not load exercises");
     const data = await res.json();
     const exercises = data.exercises || [];
@@ -636,7 +636,7 @@ function handleCredentialResponse(response) {
   if (prevTeacherId && prevTeacherId.startsWith('t_')) {
     (async () => {
       try {
-        const res = await fetch(WORKER + '/migrate-teacher-exercises', {
+        const res = await fetch(window.WORKER + '/migrate-teacher-exercises', {
           method: 'POST', headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ idToken: response.credential, oldTeacherId: prevTeacherId })
         });
@@ -765,7 +765,7 @@ async function handleFileUpload(file) {
   progressBar.innerText = "0%";
 
   try {
-    const createRes = await fetch(WORKER + "/create-bunny-video", {
+    const createRes = await fetch(window.WORKER + "/create-bunny-video", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ title: file.name })
@@ -786,7 +786,7 @@ async function handleFileUpload(file) {
     status.innerText = "⏳ Uploading " + file.name + "...";
     await new Promise((resolve, reject) => {
       const xhr = new XMLHttpRequest();
-      xhr.open("PUT", WORKER + "/upload-bunny-chunk?guid=" + bunnyGuid);
+      xhr.open("PUT", window.WORKER + "/upload-bunny-chunk?guid=" + bunnyGuid);
       xhr.upload.onprogress = e => {
         if (e.lengthComputable) {
           const pct = Math.round((e.loaded / e.total) * 100);
@@ -851,7 +851,7 @@ async function waitForBunnyReady() {
   for (let i = 0; i < 150; i++) {
     await new Promise(r => setTimeout(r, 2000));
     try {
-      const res = await fetch(WORKER + "/bunny-status?guid=" + bunnyGuid);
+      const res = await fetch(window.WORKER + "/bunny-status?guid=" + bunnyGuid);
       const data = await res.json();
       if (data.failed) throw new Error("Bunny encoding failed. Check MP4 Fallback is enabled in your Bunny library.");
       if (data.done && data.cdnUrl) {
@@ -945,7 +945,7 @@ async function useGoogleDriveLink() {
   const directUrl =
     `https://drive.usercontent.google.com/download?id=${fileId}&export=download&confirm=t`;
     // Start Bunny import in background
-const bunnyPromise = fetch(WORKER + "/gdrive-to-bunny", {
+const bunnyPromise = fetch(window.WORKER + "/gdrive-to-bunny", {
   method: "POST",
   headers: {
     "Content-Type": "application/json"
@@ -972,7 +972,7 @@ const bunnyPromise = fetch(WORKER + "/gdrive-to-bunny", {
 
   try {
 
-    const res = await fetch(WORKER + "/transcribe", {
+    const res = await fetch(window.WORKER + "/transcribe", {
       method: "POST",
       headers: {
         "Content-Type": "application/json"
@@ -1051,7 +1051,7 @@ async function autoTranscribe() {
   status.innerText = "🎙️ Transcribing... (30-90 seconds)";
 
   try {
-    const res = await fetch(WORKER + "/transcribe", {
+    const res = await fetch(window.WORKER + "/transcribe", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ audioUrl })
@@ -1079,7 +1079,7 @@ async function pollTranscriptJob(jobId) {
   for (let i = 0; i < 180; i++) {
     await new Promise(r => setTimeout(r, 2000));
     try {
-      const res = await fetch(WORKER + "/transcribe-status?jobId=" + jobId);
+      const res = await fetch(window.WORKER + "/transcribe-status?jobId=" + jobId);
       const data = await res.json();
       console.log("TRANSCRIBE RESPONSE:", data);
       if (data.done) { buildSentencesFromTranscript(data); return; }
@@ -1636,7 +1636,7 @@ async function makeItHappen() {
   const transcript = sentences.map(s => s.originalText).join(" ");
 
   try {
-    const res = await fetch(WORKER + "/generate-gaps", {
+    const res = await fetch(window.WORKER + "/generate-gaps", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ transcript, level })
@@ -1730,7 +1730,7 @@ async function generateLink() {
   linkBox.innerHTML = "⏳ Saving lesson…";
 
   try {
-    const res = await fetch(WORKER + "/save-lesson", {
+    const res = await fetch(window.WORKER + "/save-lesson", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(slim)
@@ -1788,7 +1788,7 @@ async function autoSaveExercise(lessonId) {
   if (!sentences.length) return;
   try {
     const payload = buildExercisePayload(lessonId);
-    const res = await fetch(WORKER + "/save-teacher-exercise", {
+    const res = await fetch(window.WORKER + "/save-teacher-exercise", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload)
@@ -1820,7 +1820,7 @@ async function saveExerciseManually() {
   try {
     const payload = buildExercisePayload();
 
-    const res = await fetch(WORKER + "/save-teacher-exercise", {
+    const res = await fetch(window.WORKER + "/save-teacher-exercise", {
       method: "POST",
       headers: {
         "Content-Type": "application/json"
@@ -1860,7 +1860,7 @@ async function openSavedExercises() {
   list.innerHTML = '<p style="color:#999;">Loading…</p>';
 
   try {
-    const res = await fetch(WORKER + "/list-teacher-exercises?teacherId=" + encodeURIComponent(getTeacherId()));
+    const res = await fetch(window.WORKER + "/list-teacher-exercises?teacherId=" + encodeURIComponent(getTeacherId()));
     if (!res.ok) throw new Error("Could not load exercises");
     const data = await res.json();
     const exercises = data.exercises || [];
@@ -1920,7 +1920,7 @@ async function openSavedExercise(exerciseId) {
   list.innerHTML = '<p style="color:#999;">Loading exercise…</p>';
 
   try {
-    const res = await fetch(WORKER + "/load-teacher-exercise?teacherId=" +
+    const res = await fetch(window.WORKER + "/load-teacher-exercise?teacherId=" +
       encodeURIComponent(getTeacherId()) + "&exerciseId=" + encodeURIComponent(exerciseId));
     if (!res.ok) throw new Error("Could not load exercise");
     const ex = await res.json();
@@ -2011,7 +2011,7 @@ async function deleteSavedExercise(exerciseId) {
   try {
     const idToken = localStorage.getItem('idToken') || null;
     const body = { teacherId: getTeacherId(), exerciseId, idToken };
-    const res = await fetch(WORKER + "/delete-teacher-exercise", {
+    const res = await fetch(window.WORKER + "/delete-teacher-exercise", {
       method: "DELETE",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(body)
@@ -2407,7 +2407,7 @@ function showAnswers() {
       document.getElementById("app").innerHTML =
         '<div class="card"><p>⏳ Loading lesson…</p></div>';
       try {
-        const res = await fetch(WORKER + "/load-lesson?id=" + encodeURIComponent(shortId));
+        const res = await fetch(window.WORKER + "/load-lesson?id=" + encodeURIComponent(shortId));
         if (!res.ok) throw new Error("Lesson not found (ID: " + shortId + ")");
         const lesson = await res.json();
         startStudent(lesson);
@@ -2458,7 +2458,7 @@ document.addEventListener("click", function (e) {
 </script>
   <script>
   // 1. constants + state
-  const WORKER = "...";
+  const window.WORKER = "...";
   let videoMode;
 </script>
 
