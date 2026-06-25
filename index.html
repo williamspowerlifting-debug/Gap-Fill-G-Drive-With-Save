@@ -2457,7 +2457,23 @@ document.addEventListener("click", function (e) {
 
 </script>
   <script>
-  console.log("🔥 SCRIPT LOADED");
+  // 1. constants + state
+  const WORKER = "...";
+  let videoMode;
+</script>
+
+<script>
+  // 2. functions
+  async function autoTranscribe() {}
+  async function pollTranscriptJob() {}
+</script>
+
+<script>
+  // 3. event bindings / startup
+  document.getElementById("transcribeBtn")
+    ?.addEventListener("click", autoTranscribe);
+
+  console.log("🔥 APP READY");
 </script>
 </body>
 </html>
