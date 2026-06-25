@@ -1079,6 +1079,7 @@ async function pollTranscriptJob(jobId) {
     try {
       const res = await fetch(WORKER + "/transcribe-status?jobId=" + jobId);
       const data = await res.json();
+      console.log("TRANSCRIBE RESPONSE:", data);
       if (data.done) { buildSentencesFromTranscript(data); return; }
       status.innerText = "⏳ Transcribing... (" + ((i + 1) * 2) + "s)";
     } catch {}
