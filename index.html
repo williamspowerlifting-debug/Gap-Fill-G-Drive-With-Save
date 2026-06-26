@@ -1094,6 +1094,9 @@ async function autoTranscribe() {
       await pollTranscriptJob(data.jobId);
     } else {
       buildSentencesFromTranscript(data);
+
+      setExerciseProgress(100, "Ready to save");
+
       setTimeout(showExerciseSaveButton, 500);
     }
   } catch (err) {
@@ -1110,7 +1113,16 @@ async function pollTranscriptJob(jobId) {
     try {
       const res = await fetch(WORKER + "/transcribe-status?jobId=" + jobId);
       const data = await res.json();
-      if (data.done) { buildSentencesFromTranscript(data); return; }
+      if (data.done) {
+
+    buildSentencesFromTranscript(data);
+
+    setExerciseProgress(100, "Ready to save");
+
+    setTimeout(showExerciseSaveButton, 500);
+
+    return;
+}
       status.innerText = "⏳ Transcribing... (" + ((i + 1) * 2) + "s)";
     } catch {}
   }
