@@ -88,10 +88,42 @@ button.big{padding:16px 24px;font-size:17px;font-weight:600;}
 }
 
 .progress-fill{
+    position: relative;
     height:100%;
     width:0%;
-    background:#5aa9ff;
+    background:linear-gradient(90deg,#4f8cff,#66b3ff);
     transition:width .4s ease;
+    overflow:hidden;
+}
+
+  .progress-fill::after{
+    content:"";
+    position:absolute;
+    top:0;
+    left:-40%;
+    width:40%;
+    height:100%;
+    background:linear-gradient(
+        90deg,
+        transparent,
+        rgba(255,255,255,.35),
+        transparent
+    );
+    animation:progressShimmer 1.3s linear infinite;
+}
+  @keyframes progressShimmer{
+
+    from{
+        left:-40%;
+    }
+
+    to{
+        left:140%;
+    }
+
+}
+  .progress-fill.complete::after{
+    display:none;
 }
 .transcript-box.edit-mode {
   caret-color: #4f46e5;
@@ -580,6 +612,11 @@ document.getElementById("exerciseProgressBar").style.width =
 
  function showExerciseSaveButton() {
 
+   document
+    .getElementById("exerciseProgressBar")
+    .classList
+    .add("complete");
+   
     document.getElementById("exerciseProgressContainer").style.display = "none";
 
     document.getElementById("exerciseSaveContainer").style.display = "block";
