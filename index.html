@@ -322,17 +322,43 @@ video, iframe.video-player{
     <div class="progress-wrap" id="progressWrap"><div class="progress-bar" id="progressBar">0%</div></div>
     <div class="status" id="uploadStatus"></div>
   </div>
+<!-- Step 2 -->
+<div class="card" id="exerciseDetailsCard" style="display:none;">
+  <h2>2. Exercise Details</h2>
 
+  <div style="margin-bottom:14px;">
+    <label for="exerciseName">Exercise name</label>
+
+    <input
+      type="text"
+      id="exerciseName"
+      placeholder="e.g. Unit 3 — Shopping dialogue"
+      style="margin-bottom:8px;"
+      oninput="saveLocalProgress()">
+  </div>
+
+  <button
+      class="secondary full"
+      onclick="saveExerciseManually()"
+      id="saveExBtn">
+      💾 Save Exercise
+  </button>
+
+  <div class="status" id="saveStatus"></div>
+
+</div>
+  
+  
   <!-- Step 2 -->
   <div class="card" id="step2Card" style="display:none;">
-    <h2>2. Your video</h2>
+    <h2>3. Your video</h2>
     <div id="videoBox"></div>
     <div class="status" id="transcribeStatus"></div>
   </div>
 
   <!-- Step 3 -->
   <div class="card" id="step3Card" style="display:none;">
-    <h2>3. Generate Gaps</h2>
+    <h2>4. Generate Gaps</h2>
     <div class="level-row">
       <label for="levelSelect">Student level:</label>
       <select id="levelSelect">
@@ -348,7 +374,7 @@ video, iframe.video-player{
 
   <!-- Step 4 -->
   <div class="card" id="step4Card" style="display:none;">
-    <h2>4. Edit Text</h2>
+    <h2>5. Edit Text</h2>
     <div class="transcript-help">
       💡 <b>Tap or click any word</b> to mark it as a gap. Tap a yellow word to remove the gap.
     </div>
@@ -377,12 +403,9 @@ video, iframe.video-player{
 
   <!-- Step 5 -->
   <div class="card" id="step5Card" style="display:none;">
-    <h2>5. Share</h2>
+    <h2>6. Share</h2>
 
-    <!-- Exercise name for saving -->
     <div style="margin-bottom:14px;">
-      <label for="exerciseName">Exercise name (for your saved exercises)</label>
-      <input type="text" id="exerciseName" placeholder="e.g. Unit 3 — Shopping dialogue" style="margin-bottom:8px;" oninput="saveLocalProgress()">
     </div>
 
     <button class="primary-blue full" onclick="previewExercise()">👀 Preview</button>
@@ -390,8 +413,6 @@ video, iframe.video-player{
     <div class="status" id="link"></div>
 
     <div style="margin-top:12px;border-top:1px solid #e5e7eb;padding-top:12px;">
-      <button class="secondary full" onclick="saveExerciseManually()" id="saveExBtn">💾 Save Exercise</button>
-      <div class="status" id="saveStatus"></div>
     </div>
   </div>
 </div>
@@ -514,6 +535,7 @@ function checkAndRestoreLocalProgress() {
       }
 
       // Unroll the hidden dashboard layout workflows directly to editing
+      revealStep("exerciseDetailsCard");
       revealStep("step2Card");
       revealStep("step3Card");
       revealStep("step4Card");
@@ -809,6 +831,7 @@ async function handleFileUpload(file) {
     status.innerText = "✅ Uploaded! Processing video & transcribing...";
 
     showVideoPlayer();
+    revealStep("exerciseDetailsCard");
     revealStep("step2Card");
 
     await waitForBunnyReady();
@@ -886,6 +909,7 @@ function useVideoLink() {
   document.getElementById("uploadStatus").innerText = "✅ Link loaded.";
 
   showVideoPlayer();
+  revealStep("exerciseDetailsCard");
   revealStep("step2Card");
   autoTranscribe();
 }
@@ -943,6 +967,7 @@ async function useGoogleDriveLink() {
     status.className = "status success";
     status.innerText = "✅ Imported from Google Drive! Processing & transcribing…";
 
+    revealStep("exerciseDetailsCard");
     revealStep("step2Card");
     await waitForBunnyReady();
     await autoTranscribe();
@@ -1906,6 +1931,7 @@ async function openSavedExercise(exerciseId) {
     builderPlayer = document.getElementById("builderPlayer");
 
     // Reveal all steps
+    revealStep("exerciseDetailsCard");
     revealStep("step2Card");
     revealStep("step3Card");
     revealStep("step4Card");
