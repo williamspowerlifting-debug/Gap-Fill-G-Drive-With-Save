@@ -594,12 +594,15 @@ function checkAndRestoreLocalProgress() {
       }
 
       // Unroll the hidden dashboard layout workflows directly to editing
-      revealStep("exerciseDetailsCard");
-      revealStep("step2Card");
-      revealStep("step3Card");
-      revealStep("step4Card");
-      revealStep("step5Card");
-      renderTranscript();
+     revealStep("exerciseDetailsCard");
+revealStep("step2Card");
+revealStep("step3Card");
+revealStep("step4Card");
+revealStep("step5Card");
+
+renderTranscript();
+
+showExerciseSaveButton();
     } else {
       // Clear out database if they deliberately choose to wipe and start fresh
       localStorage.removeItem("listening_exercise_scratchpad");
