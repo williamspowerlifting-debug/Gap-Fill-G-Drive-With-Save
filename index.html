@@ -1114,11 +1114,6 @@ async function pollTranscriptJob(jobId) {
       status.innerText = "⏳ Transcribing... (" + ((i + 1) * 2) + "s)";
     } catch {}
   }
-  setExerciseProgress(100, "Exercise ready!");
-
-setTimeout(() => {
-    showExerciseSaveButton();
-}, 500);
   status.className = "status error";
   status.innerText = "❌ Transcription timed out.";
 }
