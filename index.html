@@ -994,6 +994,13 @@ async function waitForBunnyReady() {
 status.innerText =
     "⏳ Video processing... (" + encode + "%)";
 
+      const exerciseProgress = 25 + (encode * 0.5);
+
+setExerciseProgress(
+    Math.round(exerciseProgress),
+    "🎬 Processing video..."
+);
+
 setExerciseProgress(
     30 + Math.round(encode * 0.4),
     "Processing video..."
