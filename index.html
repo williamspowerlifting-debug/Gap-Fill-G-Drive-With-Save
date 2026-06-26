@@ -572,7 +572,7 @@ function saveLocalProgress() {
   localStorage.setItem("listening_exercise_scratchpad", JSON.stringify(progressData));
 }
 
- function setExerciseProgress(percent, message) {
+function setExerciseProgress(percent, message) {
 
     exerciseProgressTarget = percent;
 
@@ -586,16 +586,16 @@ function saveLocalProgress() {
 
             const diff = exerciseProgressTarget - exerciseProgressCurrent;
 
-const step = Math.max(1, Math.ceil(diff / 15));
+            const step = Math.max(1, Math.ceil(diff / 15));
 
-exerciseProgressCurrent += step;
+            exerciseProgressCurrent += step;
 
-if (exerciseProgressCurrent > exerciseProgressTarget) {
-    exerciseProgressCurrent = exerciseProgressTarget;
-}
+            if (exerciseProgressCurrent > exerciseProgressTarget) {
+                exerciseProgressCurrent = exerciseProgressTarget;
+            }
 
-document.getElementById("exerciseProgressBar").style.width =
-    exerciseProgressCurrent + "%";
+            document.getElementById("exerciseProgressBar").style.width =
+                exerciseProgressCurrent + "%";
 
         }
 
@@ -878,6 +878,8 @@ let editSnapshot = null;
 let exerciseProgressCurrent = 0;
 let exerciseProgressTarget = 0;
 let exerciseProgressTimer = null;
+let exerciseProgressComplete = false;
+let exercisePulseDirection = 1;
 // Current exercise tracking (for auto-save after link generation)
 let currentExerciseId = null;
 
@@ -971,7 +973,7 @@ document.getElementById("exerciseProgressBar").style.width = "0%";
     revealStep("step2Card");
 
     await waitForBunnyReady();
-    setExerciseProgress(70, "Generating transcript...");
+    setExerciseProgress(95, "Generating transcript...");
     await autoTranscribe();
 
   } catch (err) {
@@ -1120,7 +1122,7 @@ revealStep("step2Card");
 
 await waitForBunnyReady();
 
-setExerciseProgress(70, "Generating transcript...");
+setExerciseProgress(95, "Generating transcript...");
 
 await autoTranscribe();
 
