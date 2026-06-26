@@ -595,6 +595,7 @@ function checkAndRestoreLocalProgress() {
 
       // Unroll the hidden dashboard layout workflows directly to editing
       revealStep("exerciseDetailsCard");
+      setExerciseProgress(10, "Uploading video...");
       revealStep("step2Card");
       revealStep("step3Card");
       revealStep("step4Card");
@@ -890,6 +891,7 @@ async function handleFileUpload(file) {
     status.innerText = "✅ Uploaded! Processing video & transcribing...";
 
     showVideoPlayer();
+    setExerciseProgress(40, "Processing video...");
     revealStep("exerciseDetailsCard");
     revealStep("step2Card");
 
@@ -971,6 +973,7 @@ function useVideoLink() {
   revealStep("exerciseDetailsCard");
   revealStep("step2Card");
   autoTranscribe();
+  setExerciseProgress(70, "Generating transcript...");
 }
 
 // ============================================================
@@ -1091,6 +1094,8 @@ async function autoTranscribe() {
       await pollTranscriptJob(data.jobId);
     } else {
       buildSentencesFromTranscript(data);
+      setExerciseProgress(100, "Exercise ready!");
+      setTimeout(showExerciseSaveButton, 500);
     }
   } catch (err) {
     console.error(err);
