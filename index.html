@@ -576,52 +576,85 @@ function setExerciseProgress(percent, message) {
 
     exerciseProgressTarget = percent;
 
+    exerciseProgressComplete = (percent >= 100);
+
     document.getElementById("exerciseProgressText").textContent = message;
 
     if (exerciseProgressTimer) return;
 
     exerciseProgressTimer = setInterval(() => {
 
-        if (exerciseProgressCurrent < exerciseProgressTarget) {
+        const bar =
+            document.getElementById("exerciseProgressBar");
 
-            const diff = exerciseProgressTarget - exerciseProgressCurrent;
+        if (!exerciseProgressComplete) {
 
-            const step = Math.max(1, Math.ceil(diff / 15));
+            // Move smoothly toward the target
+            if (exerciseProgressCurrent < exerciseProgressTarget - 1) {
 
-            exerciseProgressCurrent += step;
+                const diff =
+                    exerciseProgressTarget -
+                    exerciseProgressCurrent;
 
-            if (exerciseProgressCurrent > exerciseProgressTarget) {
-                exerciseProgressCurrent = exerciseProgressTarget;
+                exerciseProgressCurrent +=
+                    Math.max(1, Math.ceil(diff / 10));
+
             }
 
-            document.getElementById("exerciseProgressBar").style.width =
-                exerciseProgressCurrent + "%";
+            // Idle animation when we reach the stage
+            else {
+
+                exerciseProgressCurrent +=
+                    exercisePulseDirection * 0.2;
+
+                if (exerciseProgressCurrent >
+                    exerciseProgressTarget - 0.3) {
+
+                    exercisePulseDirection = -1;
+
+                }
+
+                if (exerciseProgressCurrent <
+                    exerciseProgressTarget - 1.3) {
+
+                    exercisePulseDirection = 1;
+
+                }
+
+            }
 
         }
 
-        if (exerciseProgressCurrent >= exerciseProgressTarget) {
+        else {
 
-            clearInterval(exerciseProgressTimer);
-            exerciseProgressTimer = null;
+            if (exerciseProgressCurrent < 100) {
+
+                const diff =
+                    100 - exerciseProgressCurrent;
+
+                exerciseProgressCurrent +=
+                    Math.max(1, Math.ceil(diff / 6));
+
+            }
+
+            else {
+
+                exerciseProgressCurrent = 100;
+
+                clearInterval(exerciseProgressTimer);
+
+                exerciseProgressTimer = null;
+
+            }
 
         }
 
-    }, 40);
+        bar.style.width =
+            exerciseProgressCurrent + "%";
+
+    }, 50);
 
 }
-
- function showExerciseSaveButton() {
-
-   document
-    .getElementById("exerciseProgressBar")
-    .classList
-    .add("complete");
-   
-    document.getElementById("exerciseProgressContainer").style.display = "none";
-
-    document.getElementById("exerciseSaveContainer").style.display = "block";
-
-} 
   
 function checkAndRestoreLocalProgress() {
   const rawData = localStorage.getItem("listening_exercise_scratchpad");
