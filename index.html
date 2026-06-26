@@ -896,6 +896,7 @@ async function handleFileUpload(file) {
     revealStep("step2Card");
 
     await waitForBunnyReady();
+    setExerciseProgress(70, "Generating transcript...");
     await autoTranscribe();
 
   } catch (err) {
@@ -973,7 +974,6 @@ function useVideoLink() {
   revealStep("exerciseDetailsCard");
   revealStep("step2Card");
   autoTranscribe();
-  setExerciseProgress(70, "Generating transcript...");
 }
 
 // ============================================================
@@ -1094,7 +1094,6 @@ async function autoTranscribe() {
       await pollTranscriptJob(data.jobId);
     } else {
       buildSentencesFromTranscript(data);
-      setExerciseProgress(100, "Exercise ready!");
       setTimeout(showExerciseSaveButton, 500);
     }
   } catch (err) {
@@ -1115,6 +1114,11 @@ async function pollTranscriptJob(jobId) {
       status.innerText = "⏳ Transcribing... (" + ((i + 1) * 2) + "s)";
     } catch {}
   }
+  setExerciseProgress(100, "Exercise ready!");
+
+setTimeout(() => {
+    showExerciseSaveButton();
+}, 500);
   status.className = "status error";
   status.innerText = "❌ Transcription timed out.";
 }
