@@ -2015,6 +2015,7 @@ async function openSavedExercise(exerciseId) {
     revealStep("step5Card");
 
     renderTranscript();
+    showExerciseSaveButton();
 
     // If there's an existing student link, restore it
     if (ex.lessonId) {
