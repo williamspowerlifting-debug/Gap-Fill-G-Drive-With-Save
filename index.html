@@ -927,7 +927,15 @@ async function waitForBunnyReady() {
         builderPlayer = document.getElementById("builderPlayer");
         return;
       }
-      status.innerText = "⏳ Video processing... (" + (data.encodeProgress || 0) + "%)";
+      const encode = data.encodeProgress || 0;
+
+status.innerText =
+    "⏳ Video processing... (" + encode + "%)";
+
+setExerciseProgress(
+    30 + Math.round(encode * 0.4),
+    "Processing video..."
+);
     } catch (e) {
       if (e.message && e.message.indexOf("encoding failed") >= 0) throw e;
     }
@@ -1032,9 +1040,16 @@ async function useGoogleDriveLink() {
     status.innerText = "✅ Imported from Google Drive! Processing & transcribing…";
 
     revealStep("exerciseDetailsCard");
-    revealStep("step2Card");
-    await waitForBunnyReady();
-    await autoTranscribe();
+
+setExerciseProgress(25, "Importing from Google Drive...");
+
+revealStep("step2Card");
+
+await waitForBunnyReady();
+
+setExerciseProgress(70, "Generating transcript...");
+
+await autoTranscribe();
 
   } catch (err) {
     clearInterval(fakeTimer);
