@@ -542,13 +542,41 @@ function saveLocalProgress() {
 
  function setExerciseProgress(percent, message) {
 
-    document.getElementById("exerciseProgressBar").style.width =
-        percent + "%";
+    exerciseProgressTarget = percent;
 
-    document.getElementById("exerciseProgressText").textContent =
-        message;
+    document.getElementById("exerciseProgressText").textContent = message;
 
-} 
+    if (exerciseProgressTimer) return;
+
+    exerciseProgressTimer = setInterval(() => {
+
+        if (exerciseProgressCurrent < exerciseProgressTarget) {
+
+            const diff = exerciseProgressTarget - exerciseProgressCurrent;
+
+const step = Math.max(1, Math.ceil(diff / 15));
+
+exerciseProgressCurrent += step;
+
+if (exerciseProgressCurrent > exerciseProgressTarget) {
+    exerciseProgressCurrent = exerciseProgressTarget;
+}
+
+document.getElementById("exerciseProgressBar").style.width =
+    exerciseProgressCurrent + "%";
+
+        }
+
+        if (exerciseProgressCurrent >= exerciseProgressTarget) {
+
+            clearInterval(exerciseProgressTimer);
+            exerciseProgressTimer = null;
+
+        }
+
+    }, 40);
+
+}
 
  function showExerciseSaveButton() {
 
@@ -809,6 +837,10 @@ let sentences = [];
 let editModeActive = false;
 let editSnapshot = null;
 
+//Progress state
+let exerciseProgressCurrent = 0;
+let exerciseProgressTarget = 0;
+let exerciseProgressTimer = null;
 // Current exercise tracking (for auto-save after link generation)
 let currentExerciseId = null;
 
@@ -893,6 +925,10 @@ async function handleFileUpload(file) {
     status.innerText = "✅ Uploaded! Processing video & transcribing...";
 
     showVideoPlayer();
+    exerciseProgressCurrent = 0;
+exerciseProgressTarget = 0;
+
+document.getElementById("exerciseProgressBar").style.width = "0%";
     setExerciseProgress(40, "Processing video...");
     revealStep("exerciseDetailsCard");
     revealStep("step2Card");
