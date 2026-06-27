@@ -643,6 +643,29 @@ function setExerciseProgress(percent, message) {
     document.getElementById("autoSaveStatus").textContent =
         "✓ Auto saved at " + time;
 }
+  async function performAutoSave(reason = "") {
+
+    // Always save recovery data first
+    saveLocalProgress();
+
+    try {
+
+        // Save to the teacher's saved exercises
+        await autoSaveExercise();
+
+        // Only show success after everything completed
+        updateAutoSaveStatus();
+
+    } catch (err) {
+
+        console.warn("Auto-save failed:", err);
+
+        document.getElementById("autoSaveStatus").textContent =
+            "⚠ Auto save failed";
+
+    }
+
+}
 function checkAndRestoreLocalProgress() {
   const rawData = localStorage.getItem("listening_exercise_scratchpad");
   if (!rawData) return;
@@ -1213,7 +1236,7 @@ async function autoTranscribe() {
     } else {
       buildSentencesFromTranscript(data);
 
-      saveLocalProgress();
+      await performAutoSave("Transcript generated");
 
       setExerciseProgress(100, "Ready to save");
 
@@ -1237,7 +1260,7 @@ async function pollTranscriptJob(jobId) {
 
     buildSentencesFromTranscript(data);
 
-    saveLocalProgress();    
+    await performAutoSave("Transcript generated");   
 
     setExerciseProgress(100, "Ready to save");
 
@@ -1702,7 +1725,7 @@ if (btn) btn.style.display = "";
 
   renderTranscript();
   // 💡 SAVE HERE INSTEAD: Silently backup the progress data now that editing is finished
-  saveLocalProgress();
+  performAutoSave("Transcript edited");
 }
 function cancelTranscriptEdit() {
   if (!editSnapshot) return;
