@@ -650,7 +650,7 @@ function setExerciseProgress(percent, message) {
         "✓ Auto saved at " + time;
 }
   function createNewExercise() {
-    window.open(location.pathname + "?mode=new", "_blank");
+    window.open(location.pathname + "?mode=new", "_blank", "noopener");
 }
   async function performAutoSave(reason = "") {
 
