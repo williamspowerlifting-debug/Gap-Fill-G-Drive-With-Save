@@ -261,6 +261,14 @@ video, iframe.video-player{
 .exercise-item-actions button{
   padding:8px 14px;font-size:13px;margin:0;
 }
+  .autosave-status{
+    margin-top:8px;
+    text-align:center;
+    font-size:13px;
+    color:#9ca3af;
+    min-height:18px;
+    transition:opacity .25s ease;
+}
 .autosave-badge{
   display:inline-block;background:#ecfdf5;color:#065f46;
   border:1px solid #10b981;border-radius:6px;padding:2px 8px;
@@ -414,7 +422,7 @@ video, iframe.video-player{
       id="saveExBtn">
       💾 Save Exercise
   </button>
-
+<div id="autoSaveStatus" class="autosave-status"></div>
 </div>
 
   <div class="status" id="saveStatus"></div>
@@ -622,7 +630,19 @@ function setExerciseProgress(percent, message) {
     if (save) save.style.display = "block";
 
 }
-  
+  function updateAutoSaveStatus() {
+
+    const now = new Date();
+
+    const time = now.toLocaleTimeString([], {
+        hour: "2-digit",
+        minute: "2-digit",
+        second: "2-digit"
+    });
+
+    document.getElementById("autoSaveStatus").textContent =
+        "✓ Auto saved at " + time;
+}
 function checkAndRestoreLocalProgress() {
   const rawData = localStorage.getItem("listening_exercise_scratchpad");
   if (!rawData) return;
@@ -1796,6 +1816,7 @@ async function makeItHappen() {
 
     // Auto-save after AI generates gaps
     autoSaveExercise();
+    updateAutoSaveStatus();
 
   } catch (err) {
     console.error(err);
@@ -1893,6 +1914,7 @@ async function generateLink() {
 
     // Auto-save exercise with the student link ID attached
     autoSaveExercise(data.id);
+    updateAutoSaveStatus();
 
   } catch (e) {
     linkBox.className = "status error";
