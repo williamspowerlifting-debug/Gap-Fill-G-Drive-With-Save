@@ -1838,8 +1838,7 @@ async function makeItHappen() {
     document.getElementById("step3Card").scrollIntoView({ behavior: "smooth" });
 
     // Auto-save after AI generates gaps
-    autoSaveExercise();
-    updateAutoSaveStatus();
+   await performAutoSave("Gaps generated");
 
   } catch (err) {
     console.error(err);
@@ -1936,8 +1935,7 @@ async function generateLink() {
     window._lastLessonId = data.id;
 
     // Auto-save exercise with the student link ID attached
-    autoSaveExercise(data.id);
-    updateAutoSaveStatus();
+    await performAutoSave("Gaps generated");
 
   } catch (e) {
     linkBox.className = "status error";
