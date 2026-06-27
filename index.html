@@ -563,6 +563,17 @@ video, iframe.video-player{
 // ============================================================
 const WORKER = window.WORKER_URL;
 
+// ── Per-window autosave key ──────────────────────────────────────────────────
+// sessionStorage is isolated per tab, so each window gets a stable unique ID.
+// localStorage keys are namespaced with this ID so every open window saves and
+// restores its own scratchpad independently.
+if (!sessionStorage.getItem('_lessonWindowId')) {
+  sessionStorage.setItem('_lessonWindowId',
+    Date.now().toString(36) + Math.random().toString(36).slice(2));
+}
+const _WINDOW_SCRATCHPAD_KEY =
+  'listening_exercise_scratchpad_' + sessionStorage.getItem('_lessonWindowId');
+
 // ============================================================
 // LOCAL STORAGE AUTO-SAVE PROGRESS RECOVERY 💾
 // ============================================================
@@ -583,7 +594,7 @@ function saveLocalProgress() {
     lastSaved: Date.now()
   };
   
-  localStorage.setItem("listening_exercise_scratchpad", JSON.stringify(progressData));
+  localStorage.setItem(_WINDOW_SCRATCHPAD_KEY, JSON.stringify(progressData));
 }
 
 function setExerciseProgress(percent, message) {
@@ -683,9 +694,12 @@ function checkAndRestoreLocalProgress() {
 
   if (params.get("mode") === "new") {
     console.log("Skipping restore");
+    // Strip ?mode=new so that after autosave fires, a refresh will correctly
+    // offer to restore progress from this window's own scratchpad key.
+    history.replaceState(null, '', location.pathname);
     return;
   }
-  const rawData = localStorage.getItem("listening_exercise_scratchpad");
+  const rawData = localStorage.getItem(_WINDOW_SCRATCHPAD_KEY);
   if (!rawData) return;
 
   try {
@@ -748,7 +762,7 @@ showExerciseSaveButton();
 }
     } else {
       // Clear out database if they deliberately choose to wipe and start fresh
-      localStorage.removeItem("listening_exercise_scratchpad");
+      localStorage.removeItem(_WINDOW_SCRATCHPAD_KEY);
     }
   } catch (e) {
     console.warn("Failed to parse progress recovery cache:", e);
@@ -757,7 +771,7 @@ showExerciseSaveButton();
 
 // Clear backup cache when the user deliberately clears or completely finishes saving
 function clearLocalProgressCache() {
-  localStorage.removeItem("listening_exercise_scratchpad");
+  localStorage.removeItem(_WINDOW_SCRATCHPAD_KEY);
 }
 
 
