@@ -1703,6 +1703,9 @@ if (btn) btn.style.display = "";
   renderTranscript();
   // 💡 SAVE HERE INSTEAD: Silently backup the progress data now that editing is finished
   saveLocalProgress();
+   // Auto-save exercise on apply changes
+    autoSaveExercise(data.id);
+    updateAutoSaveStatus();
 }
 function cancelTranscriptEdit() {
   if (!editSnapshot) return;
