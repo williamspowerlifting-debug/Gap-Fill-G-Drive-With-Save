@@ -676,6 +676,11 @@ function setExerciseProgress(percent, message) {
 
 }
 function checkAndRestoreLocalProgress() {
+  const params = new URLSearchParams(window.location.search);
+
+if (params.get("mode") === "new") {
+    return;
+}
   const rawData = localStorage.getItem("listening_exercise_scratchpad");
   if (!rawData) return;
 
