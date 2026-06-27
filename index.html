@@ -609,6 +609,19 @@ function setExerciseProgress(percent, message) {
     }, 40);
 
 }
+
+  function showExerciseSaveButton() {
+
+    const progress =
+        document.getElementById("exerciseProgressContainer");
+
+    const save =
+        document.getElementById("exerciseSaveContainer");
+
+    if (progress) progress.style.display = "none";
+    if (save) save.style.display = "block";
+
+}
   
 function checkAndRestoreLocalProgress() {
   const rawData = localStorage.getItem("listening_exercise_scratchpad");
