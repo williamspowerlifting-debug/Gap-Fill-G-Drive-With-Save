@@ -1213,7 +1213,8 @@ async function autoTranscribe() {
     } else {
       buildSentencesFromTranscript(data);
 
-      saveLocalProgress();
+      autoSaveExercise();
+    updateAutoSaveStatus();
 
       setExerciseProgress(100, "Ready to save");
 
@@ -1237,7 +1238,8 @@ async function pollTranscriptJob(jobId) {
 
     buildSentencesFromTranscript(data);
 
-    saveLocalProgress();    
+    autoSaveExercise();
+    updateAutoSaveStatus();   
 
     setExerciseProgress(100, "Ready to save");
 
@@ -1702,9 +1704,7 @@ if (btn) btn.style.display = "";
 
   renderTranscript();
   // 💡 SAVE HERE INSTEAD: Silently backup the progress data now that editing is finished
-  saveLocalProgress();
-   // Auto-save exercise on apply changes
-    autoSaveExercise(data.id);
+  autoSaveExercise();
     updateAutoSaveStatus();
 }
 function cancelTranscriptEdit() {
