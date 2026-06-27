@@ -574,6 +574,8 @@ function saveLocalProgress() {
     currentExerciseId: currentExerciseId,
     exerciseName: document.getElementById("exerciseName")?.value || "",
     sentences: sentences,
+    lastLink: window._lastLink || "",
+    lastLessonId: window._lastLessonId || "",
     lastSaved: Date.now()
   };
   
@@ -687,6 +689,8 @@ function checkAndRestoreLocalProgress() {
       externalVideoUrl = data.externalVideoUrl;
       currentExerciseId = data.currentExerciseId;
       sentences = data.sentences;
+      window._lastLink = data.lastLink || "";
+      window._lastLessonId = data.lastLessonId || "";
 
       // Restore the exercise text fields
       const nameInput = document.getElementById("exerciseName");
@@ -711,6 +715,21 @@ revealStep("step5Card");
 renderTranscript();
 
 showExerciseSaveButton();
+      if (window._lastLessonId) {
+  const linkBox = document.getElementById("link");
+
+  if (linkBox) {
+    linkBox.className = "status success";
+    linkBox.innerHTML =
+      '<b>✅ Student Link:</b> <code style="font-size:1.1em;letter-spacing:1px;">' +
+      window._lastLessonId +
+      '</code><br>' +
+      '<a href="' + window._lastLink + '" target="_blank" style="word-break:break-all;">' +
+      window._lastLink +
+      '</a>' +
+      '<br><button class="primary-blue" style="margin-top:8px;" onclick="copyLink()">📋 Copy Link</button>';
+  }
+}
     } else {
       // Clear out database if they deliberately choose to wipe and start fresh
       localStorage.removeItem("listening_exercise_scratchpad");
@@ -1935,7 +1954,7 @@ async function generateLink() {
     window._lastLessonId = data.id;
 
     // Auto-save exercise with the student link ID attached
-    await performAutoSave("Gaps generated");
+    await performAutoSave("Student link generated");
 
   } catch (e) {
     linkBox.className = "status error";
