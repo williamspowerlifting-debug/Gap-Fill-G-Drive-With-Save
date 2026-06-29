@@ -79,6 +79,72 @@ button.big{padding:16px 24px;font-size:17px;font-weight:600;}
   border-radius: 4px;
 }
 
+  .exercise-status-bar{
+
+    display:grid;
+
+    grid-template-columns:140px 1fr 180px 140px;
+
+    align-items:center;
+
+    gap:16px;
+
+    margin-bottom:16px;
+
+    padding:12px 18px;
+
+    border:1px solid #d9d9d9;
+
+    border-radius:10px;
+
+    background:#f8f9fb;
+
+    box-shadow:0 2px 6px rgba(0,0,0,.05);
+
+}
+
+.status-item{
+
+    display:flex;
+
+    align-items:center;
+
+    gap:8px;
+
+    white-space:nowrap;
+
+}
+
+.status-exercise{
+
+    overflow:hidden;
+
+    text-overflow:ellipsis;
+
+}
+
+.status-icon{
+
+    font-size:18px;
+
+}
+
+  .ready-icon{
+    color:#28a745;
+}
+
+.video-icon{
+    color:#007bff;
+}
+
+.autosave-icon{
+    color:#28a745;
+}
+
+.cloud-icon{
+    color:#6f42c1;
+}
+
   .progress-track{
     width:100%;
     height:18px;
@@ -392,7 +458,29 @@ video, iframe.video-player{
       </div>
     </div>
   </div>
+<div id="exerciseStatusBar" class="exercise-status-bar" style="display:grid;">
 
+    <div class="status-item">
+        <span class="status-icon ready-icon">🟢</span>
+        <span id="statusReady">Ready</span>
+    </div>
+
+    <div class="status-item status-exercise">
+        <span class="status-icon video-icon">🎬</span>
+        <span id="statusExerciseName">Exercise Name</span>
+    </div>
+
+    <div class="status-item">
+        <span class="status-icon autosave-icon">💾</span>
+        <span id="statusAutoSave">Not yet</span>
+    </div>
+
+    <div class="status-item">
+        <span class="status-icon cloud-icon">☁</span>
+        <span id="statusCloudSave">Unsaved</span>
+    </div>
+
+</div>
   <!-- Step 1 -->
   <div class="card" id="step1Card">
     <h2>1. Add your video</h2>
