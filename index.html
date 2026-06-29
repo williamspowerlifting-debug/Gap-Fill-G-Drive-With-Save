@@ -354,7 +354,7 @@ video, iframe.video-player{
   padding-bottom: 3px; margin-bottom: 4px; position: relative;
 }
 .transcript-sentence.section-end::after {
-  content: '⏸ Pause Here';
+  content: '✂ section break';
   display: block; font-size: 10px; color: #ef4444;
   font-weight: 600; text-align: right; margin-top: 1px;
   pointer-events: none;
@@ -508,8 +508,8 @@ video, iframe.video-player{
         <h4>Tools</h4>
         <button class="sidebar-tool" id="sectionEndTool"
                 onclick="toggleSectionEndTool()"
-                title="Force the exercise to pause after the selected sentence. Use this to split long sections of text while keeping automatic grouping everywhere else.">
-          ⏸ Pause Here
+                title="Activate, then click any sentence to mark it as a section break. Playback audio stops at marked sentences during the student exercise.">
+          ✂️
           <span>Section<br>End</span>
         </button>
       </div>
