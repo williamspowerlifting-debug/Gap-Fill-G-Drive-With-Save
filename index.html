@@ -325,6 +325,45 @@ video, iframe.video-player{
   .gap-input{width:100px;font-size:18px;}
   .transcript-word{padding:4px 8px;}
 }
+
+/* ── Section-end sidebar ── */
+#step4Flex { display: flex; gap: 12px; align-items: flex-start; }
+#sectionSidebar {
+  display: flex; flex-direction: column; gap: 8px;
+  min-width: 76px; padding: 8px;
+  background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 8px;
+  flex-shrink: 0;
+}
+#sectionSidebar h4 {
+  font-size: 10px; font-weight: 700; color: #9ca3af;
+  text-transform: uppercase; letter-spacing: 0.04em;
+  margin: 0 0 4px; text-align: center;
+}
+.sidebar-tool {
+  display: flex; flex-direction: column; align-items: center; gap: 3px;
+  padding: 8px 4px; border-radius: 6px; border: 2px solid #e5e7eb;
+  background: white; cursor: pointer; font-size: 20px; width: 100%;
+  transition: border-color 0.15s, background 0.15s;
+}
+.sidebar-tool span { font-size: 10px; font-weight: 600; color: #6b7280; text-align: center; line-height: 1.2; }
+.sidebar-tool.tool-active { border-color: #ef4444; background: #fef2f2; }
+.sidebar-tool.tool-active span { color: #ef4444; }
+#transcriptBox { flex: 1; min-width: 0; }
+.transcript-sentence.section-end {
+  border-bottom: 2px dashed #ef4444;
+  padding-bottom: 3px; margin-bottom: 4px; position: relative;
+}
+.transcript-sentence.section-end::after {
+  content: '✂ section break';
+  display: block; font-size: 10px; color: #ef4444;
+  font-weight: 600; text-align: right; margin-top: 1px;
+  pointer-events: none;
+}
+#transcriptBox.section-end-mode .transcript-sentence { cursor: pointer; }
+#transcriptBox.section-end-mode .transcript-sentence:hover { outline: 2px dashed #ef4444; border-radius: 4px; }
+/* Words inside a sentence keep their normal cursor so editing still works */
+#transcriptBox.section-end-mode .transcript-word { cursor: text; }
+
 </style>
 </head>
 <body>
@@ -464,7 +503,18 @@ video, iframe.video-player{
       💡 <b>Tap or click any word</b> to mark it as a gap. Tap a yellow word to remove the gap.
     </div>
     <button class="secondary" onclick="toggleEditMode()" id="editModeBtn" style="margin-bottom:12px;">✏️ Edit Text</button>
-    <div class="transcript-box" id="transcriptBox"></div>
+    <div id="step4Flex">
+      <div id="sectionSidebar">
+        <h4>Tools</h4>
+        <button class="sidebar-tool" id="sectionEndTool"
+                onclick="toggleSectionEndTool()"
+                title="Activate, then click any sentence to mark it as a section break. Playback audio stops at marked sentences during the student exercise.">
+          ✂️
+          <span>Section<br>End</span>
+        </button>
+      </div>
+      <div class="transcript-box" id="transcriptBox"></div>
+    </div>
   </div>
   <div id="editFooter"
      style="
@@ -974,6 +1024,7 @@ let exerciseProgressComplete = false;
 let exercisePulseDirection = 1;
 // Current exercise tracking (for auto-save after link generation)
 let currentExerciseId = null;
+let sectionEndToolActive = false;
 
 // ============================================================
 // 🎬 VIDEO HANDLING
@@ -1365,7 +1416,9 @@ function groupSentencesForStudent(rawSentences) {
     if (!pending.length) return;
     const allWords = [];
     pending.forEach(p => p.words.forEach(w => allWords.push(w)));
-    groups.push({ words: allWords, startTime: pending[0].startTime, endTime: pending[pending.length - 1].endTime });
+    // Carry sectionEnd from the last sentence in pending to the group
+    const hasSectionEnd = pending.some(p => p.sectionEnd);
+    groups.push({ words: allWords, startTime: pending[0].startTime, endTime: pending[pending.length - 1].endTime, sectionEnd: hasSectionEnd });
     pending = [];
   }
 
@@ -1375,29 +1428,38 @@ function groupSentencesForStudent(rawSentences) {
     const isShort = wordCount <= SHORT_SENTENCE_WORDS;
     const isLong = wordCount >= LONG_SENTENCE_WORDS;
 
+    // Teacher-placed section break: include in pending then force flush
+    if (s.sectionEnd) {
+      pending.push(s);
+      flushPending();
+      continue;
+    }
+
     if (isShort) { pending.push(s); continue; }
     if (isLong) {
       flushPending();
-      groups.push({ words: [...s.words], startTime: s.startTime, endTime: s.endTime });
+      groups.push({ words: [...s.words], startTime: s.startTime, endTime: s.endTime, sectionEnd: false });
       continue;
     }
     if (pending.length > 0) {
       const allWords = [];
       pending.forEach(p => p.words.forEach(w => allWords.push(w)));
       s.words.forEach(w => allWords.push(w));
-      groups.push({ words: allWords, startTime: pending[0].startTime, endTime: s.endTime });
+      groups.push({ words: allWords, startTime: pending[0].startTime, endTime: s.endTime, sectionEnd: false });
       pending = [];
     } else {
-      groups.push({ words: [...s.words], startTime: s.startTime, endTime: s.endTime });
+      groups.push({ words: [...s.words], startTime: s.startTime, endTime: s.endTime, sectionEnd: false });
     }
   }
   flushPending();
 
+  // Second pass: merge gap-less groups with next — but NEVER merge past a sectionEnd marker
   const cleanedGroups = [];
   for (let i = 0; i < groups.length; i++) {
     const current = groups[i];
     const hasGap = current.words.some(w => w.isGap);
-    if (hasGap) { cleanedGroups.push(current); continue; }
+    // Keep as-is if it has a gap OR a teacher-placed section break
+    if (hasGap || current.sectionEnd) { cleanedGroups.push(current); continue; }
     if (i < groups.length - 1) {
       const next = groups[i + 1];
       next.words = [...current.words, ...next.words];
@@ -1532,7 +1594,7 @@ function renderTranscriptEditMode() {
       return '<span class="' + cls + '" data-sent="' + si + '" data-word="' + wi + '">' + escapeHtml(w.text) + '</span>';
     }).join(" ");
     
-    return '<div class="transcript-sentence" data-sent="' + si + '">' + wordsHtml + '</div>';
+    return '<div class="transcript-sentence' + (s.sectionEnd ? ' section-end' : '') + '" data-sent="' + si + '">' + wordsHtml + '</div>';
   }).join("");
 }
 
@@ -1550,7 +1612,7 @@ function renderTranscript() {
       return '<span class="' + cls + '" id="' + id + '" data-sent="' + si +
       '" data-word="' + wi + '">' + escapeHtml(w.text) + '</span>';
     }).join(" ");
-    return '<div class="transcript-sentence">' + wordsHtml + '</div>';
+    return '<div class="transcript-sentence' + (s.sectionEnd ? ' section-end' : '') + '" data-sent="' + si + '">' + wordsHtml + '</div>';
   }).join("");
 }
 
@@ -1682,13 +1744,24 @@ function rebuildSentencesFromDOM() {
   }
 
   // Pre-populate empty baseline structures matching original counts
+  // Also read the section-end class from the DOM as the source of truth,
+  // since teachers may have toggled markers while in edit mode.
+  const sentenceDivs = document.getElementById("transcriptBox")
+    .querySelectorAll(".transcript-sentence");
+  const domSectionEnd = {};
+  sentenceDivs.forEach(div => {
+    const si = parseInt(div.getAttribute("data-sent"), 10);
+    if (!isNaN(si)) domSectionEnd[si] = div.classList.contains("section-end");
+  });
+
   const newSentences = [];
   for (let i = 0; i < sentences.length; i++) {
     newSentences.push({
       words: [],
       startTime: sentences[i].startTime,
       endTime: sentences[i].endTime,
-      originalText: ""
+      originalText: "",
+      sectionEnd: (i in domSectionEnd) ? domSectionEnd[i] : !!sentences[i].sectionEnd
     });
   }
 
@@ -1926,12 +1999,55 @@ function applyAISuggestedGaps(aiSections) {
 // ============================================================
 // 📦 BUILD LESSON & SHARE
 // ============================================================
+
+// ── SECTION END TOOL ────────────────────────────────────────────────────────
+function toggleSectionEndTool() {
+  sectionEndToolActive = !sectionEndToolActive;
+  const btn = document.getElementById("sectionEndTool");
+  const box = document.getElementById("transcriptBox");
+  if (btn) btn.classList.toggle("tool-active", sectionEndToolActive);
+  if (box) box.classList.toggle("section-end-mode", sectionEndToolActive);
+}
+
+function _handleSectionEndClick(e) {
+  if (!sectionEndToolActive) return;
+  const box = document.getElementById("transcriptBox");
+  // If the click landed on a word span (or inside one), let normal
+  // editing / gap-toggle behaviour proceed untouched.
+  let t = e.target;
+  while (t && t !== box) {
+    if (t.classList && t.classList.contains("transcript-word")) return;
+    t = t.parentNode;
+  }
+  // Click was on the sentence div itself (gap between words) → toggle marker.
+  e.preventDefault();
+  let node = e.target;
+  while (node && node !== box) {
+    if (node.classList && node.classList.contains("transcript-sentence")) {
+      const si = parseInt(node.dataset.sent, 10);
+      if (!isNaN(si) && sentences[si]) {
+        sentences[si].sectionEnd = !sentences[si].sectionEnd;
+        node.classList.toggle("section-end", sentences[si].sectionEnd);
+      }
+      return;
+    }
+    node = node.parentNode;
+  }
+}
+
+// Wire the section-end click handler once the DOM is ready
+document.addEventListener("DOMContentLoaded", function() {
+  const box = document.getElementById("transcriptBox");
+  if (box) box.addEventListener("click", _handleSectionEndClick);
+});
+
 function buildLesson() {
   const lessonSentences = sentences
     .map(s => ({
       words: s.words.map(w => ({ text: w.text, isGap: w.isGap })),
       startTime: s.startTime,
-      endTime: s.endTime
+      endTime: s.endTime,
+      sectionEnd: !!s.sectionEnd
     }))
     .filter(s => s.words.length > 0);
 
@@ -1961,7 +2077,8 @@ async function generateLink() {
     sentences: lesson.sentences.map(s => ({
       words: s.words.map(w => w.isGap ? { t: w.text, g: 1 } : { t: w.text }),
       s: Math.round(s.startTime * 100) / 100,
-      e: Math.round(s.endTime * 100) / 100
+      e: Math.round(s.endTime * 100) / 100,
+      ...(s.sectionEnd ? { x: 1 } : {})
     }))
   };
 
@@ -2019,7 +2136,8 @@ function buildExercisePayload(lessonId) {
     sentences: lesson.sentences.map(s => ({
       words: s.words.map(w => w.isGap ? { t: w.text, g: 1 } : { t: w.text }),
       s: Math.round(s.startTime * 100) / 100,
-      e: Math.round(s.endTime * 100) / 100
+      e: Math.round(s.endTime * 100) / 100,
+      ...(s.sectionEnd ? { x: 1 } : {})
     }))
   };
 }
@@ -2194,6 +2312,7 @@ async function openSavedExercise(exerciseId) {
       words: s.words.map(w => ({ text: w.text, isGap: !!w.isGap, time: 0 })),
       startTime: s.startTime || 0,
       endTime: s.endTime || 0,
+      sectionEnd: !!s.sectionEnd,
       originalText: s.words.map(w => w.text).join(" ")
     }));
 
@@ -2362,7 +2481,8 @@ function normalizeLesson(raw) {
             return { text: String(w), isGap: false };
           }),
           startTime: s.startTime !== undefined ? s.startTime : (s.s || 0),
-          endTime: s.endTime !== undefined ? s.endTime : (s.e || 0)
+          endTime: s.endTime !== undefined ? s.endTime : (s.e || 0),
+          sectionEnd: !!(s.sectionEnd || s.x)
         };
       }
       return s;
