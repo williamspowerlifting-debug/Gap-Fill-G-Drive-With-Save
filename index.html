@@ -1170,6 +1170,10 @@ async function useGoogleDriveLink() {
     return;
   }
 
+  // Pre-fill exercise name if the field is empty (mirrors local-file behaviour)
+  const nameInput = document.getElementById("exerciseName");
+  if (nameInput && !nameInput.value.trim()) nameInput.value = "Google Drive Video";
+
   const status = document.getElementById("uploadStatus");
   const progressWrap = document.getElementById("progressWrap");
   const progressBar = document.getElementById("progressBar");
