@@ -458,7 +458,7 @@ video, iframe.video-player{
       </div>
     </div>
   </div>
-<div id="exerciseStatusBar" class="exercise-status-bar" style="display:grid;">
+<div id="exerciseStatusBar" class="exercise-status-bar" style="display:hidden;">
 
     <div class="status-item">
         <span class="status-icon ready-icon">🟢</span>
@@ -483,6 +483,7 @@ video, iframe.video-player{
 </div>
   <!-- Step 1 -->
   <div class="card" id="step1Card">
+    <div id="uploadSection">
     <h2>1. Add your video</h2>
     <div class="dropzone" id="dropzone">
       <strong>Click or drag a video here</strong>
@@ -503,6 +504,7 @@ video, iframe.video-player{
     <div class="progress-wrap" id="progressWrap"><div class="progress-bar" id="progressBar">0%</div></div>
     <div class="status" id="uploadStatus"></div>
   </div>
+</div>
 <!-- Step 2 -->
 <div class="card" id="exerciseDetailsCard" style="display:none;">
   <h2>2. Exercise Details</h2>
@@ -785,6 +787,20 @@ function setExerciseProgress(percent, message) {
     if (save) save.style.display = "block";
 
 }
+  function showEditingWorkspace() {
+
+    const upload = document.getElementById("uploadSection");
+    const ribbon = document.getElementById("exerciseStatusBar");
+
+    if (upload) {
+        upload.style.display = "none";
+    }
+
+    if (ribbon) {
+        ribbon.style.display = "grid";
+    }
+
+}
   function updateAutoSaveStatus() {
 
     const now = new Date();
@@ -936,6 +952,9 @@ revealStep("step4Card");
 revealStep("step5Card");
 
 renderTranscript();
+updateStatusExerciseName();
+
+showEditingWorkspace();
 
 showExerciseSaveButton();
       if (window._lastLessonId) {
@@ -1662,6 +1681,9 @@ function buildSentencesFromTranscript(data) {
   status.innerText = "✅ Transcript ready (" + sentences.length + " sentences).";
 
   renderTranscript();
+  updateStatusExerciseName();
+
+showEditingWorkspace();
   revealStep("step3Card");
   revealStep("step4Card");
   revealStep("step5Card");
