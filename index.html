@@ -797,7 +797,48 @@ function setExerciseProgress(percent, message) {
 
     document.getElementById("autoSaveStatus").textContent =
         "✓ Auto saved at " + time;
+    updateStatusAutoSave(currentTime);
 }
+function updateStatusExerciseName() {
+    const status = document.getElementById("statusExerciseName");
+    const input = document.getElementById("exerciseName");
+
+    if (status && input) {
+        status.textContent = input.value || "Untitled Exercise";
+    }
+}
+  function setCloudStatus(state) {
+    const el = document.getElementById("statusCloudSave");
+    if (!el) return;
+
+    el.className = "";
+
+    switch (state) {
+
+        case "unsaved":
+            el.textContent = "Unsaved";
+            el.style.color = "#d97706";
+            break;
+
+        case "saving":
+            el.textContent = "Saving...";
+            el.style.color = "#2563eb";
+            break;
+
+        case "saved":
+            el.textContent = "Saved";
+            el.style.color = "#16a34a";
+            break;
+    }
+}
+  function updateStatusAutoSave(timeText) {
+    const status = document.getElementById("statusAutoSave");
+
+    if (status) {
+        status.textContent = timeText;
+    }
+}
+  
   function createNewExercise() {
     window.open(location.pathname + "?mode=new", "_blank", "noopener");
 }
@@ -822,7 +863,21 @@ function setExerciseProgress(percent, message) {
             "⚠ Auto save failed";
 
     }
+function showEditingWorkspace() {
+    const upload = document.getElementById("uploadSection");
+    const status = document.getElementById("exerciseStatusBar");
 
+    if (upload) upload.style.display = "none";
+    if (status) status.style.display = "grid";
+}
+
+function showUploadWorkspace() {
+    const upload = document.getElementById("uploadSection");
+    const status = document.getElementById("exerciseStatusBar");
+
+    if (upload) upload.style.display = "";
+    if (status) status.style.display = "none";
+}
 }
 function checkAndRestoreLocalProgress() {
   const params = new URLSearchParams(window.location.search);
@@ -2379,7 +2434,11 @@ async function openSavedExercise(exerciseId) {
       bunnyGuid = null;
       bunnyDirectUrl = ex.videoUrl;
     }
+    const exerciseNameInput = document.getElementById("exerciseName");
 
+    if (exerciseNameInput) {
+    exerciseNameInput.addEventListener("input", updateStatusExerciseName);
+    }
     // Restore exercise name
     const nameInput = document.getElementById("exerciseName");
     if (nameInput) nameInput.value = ex.name || "";
