@@ -79,72 +79,6 @@ button.big{padding:16px 24px;font-size:17px;font-weight:600;}
   border-radius: 4px;
 }
 
-  .exercise-status-bar{
-
-    display:grid;
-
-    grid-template-columns:140px 1fr 180px 140px;
-
-    align-items:center;
-
-    gap:16px;
-
-    margin-bottom:16px;
-
-    padding:12px 18px;
-
-    border:1px solid #d9d9d9;
-
-    border-radius:10px;
-
-    background:#f8f9fb;
-
-    box-shadow:0 2px 6px rgba(0,0,0,.05);
-
-}
-
-.status-item{
-
-    display:flex;
-
-    align-items:center;
-
-    gap:8px;
-
-    white-space:nowrap;
-
-}
-
-.status-exercise{
-
-    overflow:hidden;
-
-    text-overflow:ellipsis;
-
-}
-
-.status-icon{
-
-    font-size:18px;
-
-}
-
-  .ready-icon{
-    color:#28a745;
-}
-
-.video-icon{
-    color:#007bff;
-}
-
-.autosave-icon{
-    color:#28a745;
-}
-
-.cloud-icon{
-    color:#6f42c1;
-}
-
   .progress-track{
     width:100%;
     height:18px;
@@ -458,32 +392,9 @@ video, iframe.video-player{
       </div>
     </div>
   </div>
-<div id="exerciseStatusBar" class="exercise-status-bar" style="display:none;">
 
-    <div class="status-item">
-        <span class="status-icon ready-icon">🟢</span>
-        <span id="statusReady">Ready</span>
-    </div>
-
-    <div class="status-item status-exercise">
-        <span class="status-icon video-icon">🎬</span>
-        <span id="statusExerciseName">Exercise Name</span>
-    </div>
-
-    <div class="status-item">
-        <span class="status-icon autosave-icon">💾</span>
-        <span id="statusAutoSave">Not yet</span>
-    </div>
-
-    <div class="status-item">
-        <span class="status-icon cloud-icon">☁</span>
-        <span id="statusCloudSave">Unsaved</span>
-    </div>
-
-</div>
   <!-- Step 1 -->
   <div class="card" id="step1Card">
-    <div id="uploadSection">
     <h2>1. Add your video</h2>
     <div class="dropzone" id="dropzone">
       <strong>Click or drag a video here</strong>
@@ -504,7 +415,6 @@ video, iframe.video-player{
     <div class="progress-wrap" id="progressWrap"><div class="progress-bar" id="progressBar">0%</div></div>
     <div class="status" id="uploadStatus"></div>
   </div>
-</div>
 <!-- Step 2 -->
 <div class="card" id="exerciseDetailsCard" style="display:none;">
   <h2>2. Exercise Details</h2>
@@ -787,20 +697,6 @@ function setExerciseProgress(percent, message) {
     if (save) save.style.display = "block";
 
 }
-  function showEditingWorkspace() {
-
-    const upload = document.getElementById("uploadSection");
-    const ribbon = document.getElementById("exerciseStatusBar");
-
-    if (upload) {
-        upload.style.display = "none";
-    }
-
-    if (ribbon) {
-        ribbon.style.display = "grid";
-    }
-
-}
   function updateAutoSaveStatus() {
 
     const now = new Date();
@@ -813,48 +709,7 @@ function setExerciseProgress(percent, message) {
 
     document.getElementById("autoSaveStatus").textContent =
         "✓ Auto saved at " + time;
-    updateStatusAutoSave(currentTime);
 }
-function updateStatusExerciseName() {
-    const status = document.getElementById("statusExerciseName");
-    const input = document.getElementById("exerciseName");
-
-    if (status && input) {
-        status.textContent = input.value || "Untitled Exercise";
-    }
-}
-  function setCloudStatus(state) {
-    const el = document.getElementById("statusCloudSave");
-    if (!el) return;
-
-    el.className = "";
-
-    switch (state) {
-
-        case "unsaved":
-            el.textContent = "Unsaved";
-            el.style.color = "#d97706";
-            break;
-
-        case "saving":
-            el.textContent = "Saving...";
-            el.style.color = "#2563eb";
-            break;
-
-        case "saved":
-            el.textContent = "Saved";
-            el.style.color = "#16a34a";
-            break;
-    }
-}
-  function updateStatusAutoSave(timeText) {
-    const status = document.getElementById("statusAutoSave");
-
-    if (status) {
-        status.textContent = timeText;
-    }
-}
-  
   function createNewExercise() {
     window.open(location.pathname + "?mode=new", "_blank", "noopener");
 }
@@ -879,21 +734,7 @@ function updateStatusExerciseName() {
             "⚠ Auto save failed";
 
     }
-function showEditingWorkspace() {
-    const upload = document.getElementById("uploadSection");
-    const status = document.getElementById("exerciseStatusBar");
 
-    if (upload) upload.style.display = "none";
-    if (status) status.style.display = "grid";
-}
-
-function showUploadWorkspace() {
-    const upload = document.getElementById("uploadSection");
-    const status = document.getElementById("exerciseStatusBar");
-
-    if (upload) upload.style.display = "";
-    if (status) status.style.display = "none";
-}
 }
 function checkAndRestoreLocalProgress() {
   const params = new URLSearchParams(window.location.search);
@@ -952,9 +793,6 @@ revealStep("step4Card");
 revealStep("step5Card");
 
 renderTranscript();
-updateStatusExerciseName();
-
-showEditingWorkspace();
 
 showExerciseSaveButton();
       if (window._lastLessonId) {
@@ -1681,9 +1519,6 @@ function buildSentencesFromTranscript(data) {
   status.innerText = "✅ Transcript ready (" + sentences.length + " sentences).";
 
   renderTranscript();
-  updateStatusExerciseName();
-
-showEditingWorkspace();
   revealStep("step3Card");
   revealStep("step4Card");
   revealStep("step5Card");
@@ -2456,11 +2291,7 @@ async function openSavedExercise(exerciseId) {
       bunnyGuid = null;
       bunnyDirectUrl = ex.videoUrl;
     }
-    const exerciseNameInput = document.getElementById("exerciseName");
 
-    if (exerciseNameInput) {
-    exerciseNameInput.addEventListener("input", updateStatusExerciseName);
-    }
     // Restore exercise name
     const nameInput = document.getElementById("exerciseName");
     if (nameInput) nameInput.value = ex.name || "";
