@@ -787,7 +787,20 @@ function setExerciseProgress(percent, message) {
     if (save) save.style.display = "block";
 
 }
+  function showEditingWorkspace() {
 
+    const upload = document.getElementById("uploadSection");
+    const ribbon = document.getElementById("exerciseStatusBar");
+
+    if (upload) {
+        upload.style.display = "none";
+    }
+
+    if (ribbon) {
+        ribbon.style.display = "grid";
+    }
+
+}
   function updateAutoSaveStatus() {
 
     const now = new Date();
@@ -867,33 +880,21 @@ function updateStatusExerciseName() {
 
     }
 function showEditingWorkspace() {
+    const upload = document.getElementById("uploadSection");
+    const status = document.getElementById("exerciseStatusBar");
 
-    const step1Card = document.getElementById("step1Card");
-    const ribbon = document.getElementById("exerciseStatusBar");
-
-    if (step1Card) {
-        step1Card.style.display = "none";
-    }
-
-    if (ribbon) {
-        ribbon.style.display = "grid";
-    }
+    if (upload) upload.style.display = "none";
+    if (status) status.style.display = "grid";
 }
 
 function showUploadWorkspace() {
+    const upload = document.getElementById("uploadSection");
+    const status = document.getElementById("exerciseStatusBar");
 
-    const step1Card = document.getElementById("step1Card");
-    const ribbon = document.getElementById("exerciseStatusBar");
-
-    if (step1Card) {
-        step1Card.style.display = "";
-    }
-
-    if (ribbon) {
-        ribbon.style.display = "none";
-    }
+    if (upload) upload.style.display = "";
+    if (status) status.style.display = "none";
 }
-
+}
 function checkAndRestoreLocalProgress() {
   const params = new URLSearchParams(window.location.search);
 
@@ -2493,8 +2494,6 @@ async function openSavedExercise(exerciseId) {
     revealStep("step5Card");
 
     renderTranscript();
-    updateStatusExerciseName();
-    showEditingWorkspace();
     showExerciseSaveButton();
 
     // If there's an existing student link, restore it
