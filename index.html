@@ -2189,7 +2189,7 @@ async function generateLink() {
 
     // Auto-save exercise with the student link ID attached
     await performAutoSave("Student link generated");
-
+    updateRibbonSaveStatus("unsaved");
   } catch (e) {
     linkBox.className = "status error";
     linkBox.innerHTML = "❌ Could not save lesson: " + e.message;
