@@ -275,6 +275,42 @@ video, iframe.video-player{
   font-size:12px;font-weight:600;margin-left:8px;
 }
 
+
+/* ── Status Ribbon ── */
+#statusRibbon {
+  display: none;
+  background: #ffffff;
+  color: #111827;
+  border-radius: 12px;
+  padding: 12px 20px;
+  margin-bottom: 16px;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  font-size: 14px;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.10);
+  border: 1px solid #e5e7eb;
+}
+#statusRibbon.visible { display: flex; }
+.ribbon-badge {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 13px;
+  border-radius: 20px;
+  background: #f3f4f6;
+  color: #111827;
+  white-space: nowrap;
+  font-weight: 500;
+}
+.ribbon-divider {
+  width: 1px; height: 22px;
+  background: #d1d5db;
+  flex-shrink: 0;
+}
+#ribbonSaveStatus.ribbon-unsaved { background: #ede9fe; color: #6b21a8; }
+#ribbonSaveStatus.ribbon-saved   { background: #dcfce7; color: #166534; }
+#ribbonSaveStatus.ribbon-saving  { background: #fef9c3; color: #854d0e; }
 /* Student view */
 .student-card{padding:24px;}
 .sentence-display{
@@ -329,7 +365,7 @@ video, iframe.video-player{
 /* ── Section-end sidebar ── */
 #step4Flex { display: flex; gap: 12px; align-items: flex-start; }
 #sectionSidebar {
-  display: flex; flex-direction: column; gap: 8px;
+  display: none; flex-direction: column; gap: 8px;
   min-width: 76px; padding: 8px;
   background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 8px;
   flex-shrink: 0;
@@ -415,6 +451,16 @@ video, iframe.video-player{
     <div class="progress-wrap" id="progressWrap"><div class="progress-bar" id="progressBar">0%</div></div>
     <div class="status" id="uploadStatus"></div>
   </div>
+
+<div id="statusRibbon">
+  <span class="ribbon-badge">✅ Ready</span>
+  <span class="ribbon-divider"></span>
+  <span class="ribbon-badge" id="ribbonName">🎬 Exercise</span>
+  <span class="ribbon-divider"></span>
+  <span class="ribbon-badge" id="ribbonAutoSave">💾 Auto Saved</span>
+  <span class="ribbon-divider"></span>
+  <span class="ribbon-badge ribbon-unsaved" id="ribbonSaveStatus">🟣 Unsaved</span>
+</div>
 <!-- Step 2 -->
 <div class="card" id="exerciseDetailsCard" style="display:none;">
   <h2>2. Exercise Details</h2>
@@ -427,7 +473,7 @@ video, iframe.video-player{
       id="exerciseName"
       placeholder="e.g. Unit 3 — Shopping dialogue"
       style="margin-bottom:8px;"
-      oninput="saveLocalProgress()">
+      oninput="saveLocalProgress(); updateRibbonName();">
   </div>
 
   <!-- Progress Area -->
@@ -465,10 +511,8 @@ video, iframe.video-player{
       id="saveExBtn">
       💾 Save Exercise
   </button>
-<div id="autoSaveStatus" class="autosave-status"></div>
 </div>
 
-  <div class="status" id="saveStatus"></div>
 
 </div>
   
@@ -707,8 +751,8 @@ function setExerciseProgress(percent, message) {
         second: "2-digit"
     });
 
-    document.getElementById("autoSaveStatus").textContent =
-        "✓ Auto saved at " + time;
+    const _asEl = document.getElementById("autoSaveStatus"); if (_asEl) _asEl.textContent = "✓ Auto saved at " + time;
+    updateRibbonAutoSave("Auto saved at " + time);
 }
   function createNewExercise() {
     window.open(location.pathname + "?mode=new", "_blank", "noopener");
@@ -730,8 +774,8 @@ function setExerciseProgress(percent, message) {
 
         console.warn("Auto-save failed:", err);
 
-        document.getElementById("autoSaveStatus").textContent =
-            "⚠ Auto save failed";
+        const _asEl2 = document.getElementById("autoSaveStatus"); if (_asEl2) _asEl2.textContent = "⚠ Auto save failed";
+        updateRibbonAutoSave("⚠ Auto save failed");
 
     }
 
@@ -793,6 +837,7 @@ revealStep("step4Card");
 revealStep("step5Card");
 
 renderTranscript();
+showStatusRibbon();
 
 showExerciseSaveButton();
       if (window._lastLessonId) {
@@ -1521,6 +1566,7 @@ function buildSentencesFromTranscript(data) {
   renderTranscript();
   revealStep("step3Card");
   revealStep("step4Card");
+  showStatusRibbon();
   revealStep("step5Card");
 }
 
@@ -1558,6 +1604,8 @@ function toggleEditMode() {
   if (editModeActive) return;
   editModeActive = true;
   updateHelpTooltip(editModeActive);
+  const sidebarEl = document.getElementById("sectionSidebar");
+  if (sidebarEl) sidebarEl.style.display = "flex";
   const btn = document.getElementById("editModeBtn");
   const footer = document.getElementById("editFooter");
   editSnapshot = JSON.parse(JSON.stringify(sentences));
@@ -1847,6 +1895,7 @@ if (btn) btn.style.display = "";
   renderTranscript();
   // 💡 SAVE HERE INSTEAD: Silently backup the progress data now that editing is finished
   performAutoSave("Transcript edited");
+  updateRibbonSaveStatus('unsaved');
 }
 function cancelTranscriptEdit() {
   if (!editSnapshot) return;
@@ -1898,6 +1947,14 @@ function renderTranscript() {
   // Always ensure the box is read-only when renderTranscript is called
   box.contentEditable = "false";
   box.classList.remove("edit-mode");
+  // Hide section-end sidebar and deactivate the tool
+  const sb = document.getElementById("sectionSidebar");
+  if (sb) sb.style.display = "none";
+  if (sectionEndToolActive) {
+    sectionEndToolActive = false;
+    document.getElementById("sectionEndTool")?.classList.remove("tool-active");
+    box.classList.remove("section-end-mode");
+  }
   if (!sentences.length) { box.innerHTML = "<i>No transcript.</i>"; return; }
   box.innerHTML = sentences.map((s, si) => {
     const wordsHtml = s.words.map((w, wi) => {
@@ -1960,6 +2017,7 @@ async function makeItHappen() {
 
     // Auto-save after AI generates gaps
    await performAutoSave("Gaps generated");
+   updateRibbonSaveStatus('unsaved');
 
   } catch (err) {
     console.error(err);
@@ -1996,6 +2054,36 @@ function applyAISuggestedGaps(aiSections) {
 // ============================================================
 
 // ── SECTION END TOOL ────────────────────────────────────────────────────────
+
+// ── Status Ribbon helpers ─────────────────────────────────────────────────────
+function showStatusRibbon() {
+  const upload = document.getElementById('step1Card');
+  if (upload && upload.style.display !== 'none') {
+    upload.style.transition = 'opacity 0.5s';
+    upload.style.opacity = '0';
+    setTimeout(() => { upload.style.display = 'none'; }, 500);
+  }
+  const ribbon = document.getElementById('statusRibbon');
+  if (ribbon) ribbon.classList.add('visible');
+  updateRibbonName();
+}
+function updateRibbonName() {
+  const name = (document.getElementById('exerciseName')?.value || '').trim() || 'Untitled Exercise';
+  const el = document.getElementById('ribbonName');
+  if (el) el.textContent = '🎬 ' + name;
+}
+function updateRibbonSaveStatus(state) {
+  const el = document.getElementById('ribbonSaveStatus');
+  if (!el) return;
+  el.classList.remove('ribbon-unsaved', 'ribbon-saved', 'ribbon-saving');
+  if (state === 'saving')     { el.textContent = '🔄 Saving…';  el.classList.add('ribbon-saving');  }
+  else if (state === 'saved') { el.textContent = '🟢 Saved';    el.classList.add('ribbon-saved');   }
+  else                        { el.textContent = '🟣 Unsaved';  el.classList.add('ribbon-unsaved'); }
+}
+function updateRibbonAutoSave(text) {
+  const el = document.getElementById('ribbonAutoSave');
+  if (el) el.textContent = '💾 ' + text;
+}
 function toggleSectionEndTool() {
   sectionEndToolActive = !sectionEndToolActive;
   const btn = document.getElementById("sectionEndTool");
@@ -2166,9 +2254,9 @@ async function saveExerciseManually() {
 
   btn.disabled = true;
   btn.innerText = "💾 Saving…";
+  updateRibbonSaveStatus('saving');
 
-  saveStatus.className = "status";
-  saveStatus.innerText = "Saving…";
+  if (saveStatus) { saveStatus.className = "status"; saveStatus.innerText = "Saving…"; }
 
   try {
     const payload = buildExercisePayload();
@@ -2189,14 +2277,14 @@ async function saveExerciseManually() {
 
     currentExerciseId = data.exerciseId;
 
-    saveStatus.className = "status success";
-    saveStatus.innerText = "✅ Exercise saved!";
+    if (saveStatus) { saveStatus.className = "status success"; saveStatus.innerText = "✅ Exercise saved!"; }
+    updateRibbonSaveStatus('saved');
     // 💡 HOOK 3: Clear the local safety scratchpad upon full server synchronization
   clearLocalProgressCache();
   }
   catch (e) {
-    saveStatus.className = "status error";
-    saveStatus.innerText = "❌ Could not save: " + e.message;
+    if (saveStatus) { saveStatus.className = "status error"; saveStatus.innerText = "❌ Could not save: " + e.message; }
+    updateRibbonSaveStatus('unsaved');
   }
   finally {
     btn.disabled = false;
@@ -2326,18 +2414,35 @@ async function openSavedExercise(exerciseId) {
 
     renderTranscript();
     showExerciseSaveButton();
+    showStatusRibbon();
+    updateRibbonSaveStatus('saved');
 
     // If there's an existing student link, restore it
-    if (ex.lessonId) {
-      const link = location.origin + location.pathname + "?id=" + ex.lessonId;
-      const linkBox = document.getElementById("link");
-      linkBox.className = "status success";
-      linkBox.innerHTML =
+   const linkBox = document.getElementById("link");
+
+if (ex.lessonId) {
+  
+
+    const link = location.origin + location.pathname + "?id=" + ex.lessonId;
+
+    linkBox.className = "status success";
+    linkBox.innerHTML =
         '<b>✅ Student Link:</b> <code style="font-size:1.1em;letter-spacing:1px;">' + ex.lessonId + '</code><br>' +
         '<a href="' + link + '" target="_blank" style="word-break:break-all;">' + link + '</a>' +
         '<br><button class="primary-blue" style="margin-top:8px;" onclick="copyLink()">📋 Copy Link</button>';
-      window._lastLink = link;
-    }
+
+    window._lastLink = link;
+
+} else {
+
+    window._lastLink = "";
+window._lastLessonId = null;
+
+// Clear any previously displayed link
+linkBox.innerHTML = "";
+linkBox.className = "status";
+
+}
 
     document.getElementById("step2Card").scrollIntoView({ behavior: "smooth" });
 
@@ -2800,6 +2905,7 @@ document.addEventListener("click", function (e) {
     
     // Toggle the data memory state directly
     wordObj.isGap = !wordObj.isGap;
+    updateRibbonSaveStatus('unsaved');
     
     // Update the UI immediately without destroying or re-rendering any nodes
     if (wordObj.isGap) {
