@@ -412,7 +412,10 @@ video, iframe.video-player{
       <div class="sub">Upload a video. We'll do the rest.</div>
     </div>
     <div id="headerRight" style="display:flex;align-items:center;gap:10px;">
-      <button class="primary-blue" onclick="openSavedExercises()" style="white-space:nowrap;margin-top:6px;">
+      <button id="headerActivitiesBtn"
+              class="primary-blue"
+              onclick="openSavedExercises()"
+              style="white-space:nowrap;margin-top:6px;">
         My Activities
       </button>
       <div id="authArea" style="display:flex;align-items:center;gap:8px;">
@@ -1224,7 +1227,8 @@ async function handleFileUpload(file) {
     progressBar.innerText = "Done";
     status.className = "status success";
     status.innerText = "✅ Uploaded! Processing video & transcribing...";
-
+    const headerBtn = document.getElementById("headerActivitiesBtn");
+    if (headerBtn) headerBtn.style.display = "none";
     showVideoPlayer();
     exerciseProgressCurrent = 0;
 exerciseProgressTarget = 0;
@@ -1316,7 +1320,9 @@ function useVideoLink() {
 
   document.getElementById("uploadStatus").className = "status success";
   document.getElementById("uploadStatus").innerText = "✅ Link loaded.";
-
+  
+  const headerBtn = document.getElementById("headerActivitiesBtn");
+  if (headerBtn) headerBtn.style.display = "none";
   showVideoPlayer();
   revealStep("exerciseDetailsCard");
   revealStep("step2Card");
@@ -1379,7 +1385,8 @@ async function useGoogleDriveLink() {
     progressBar.innerText = "Done";
     status.className = "status success";
     status.innerText = "✅ Imported from Google Drive! Processing & transcribing…";
-
+const headerBtn = document.getElementById("headerActivitiesBtn");
+if (headerBtn) headerBtn.style.display = "none";
 setExerciseProgress(25, "Importing from Google Drive...");
 
 goToStep(3);
@@ -2473,6 +2480,8 @@ async function openSavedExercise(exerciseId) {
     builderPlayer = document.getElementById("builderPlayer");
 
    // Switch to the editor view
+    const headerBtn = document.getElementById("headerActivitiesBtn");
+if (headerBtn) headerBtn.style.display = "none";
 goToStep(6);
 
     renderTranscript();
