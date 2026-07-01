@@ -452,14 +452,24 @@ video, iframe.video-player{
     <div class="status" id="uploadStatus"></div>
   </div>
 
-<div id="statusRibbon">
-  <span class="ribbon-badge">✅ Ready</span>
-  <span class="ribbon-divider"></span>
-  <span class="ribbon-badge" id="ribbonName">🎬 Activity</span>
-  <span class="ribbon-divider"></span>
-  <span class="ribbon-badge" id="ribbonAutoSave">💾 Auto Saved</span>
-  <span class="ribbon-divider"></span>
-  <span class="ribbon-badge ribbon-unsaved" id="ribbonSaveStatus">🟣 Unsaved</span>
+<div id="statusRibbon" class="status-ribbon">
+
+  <div class="ribbon-left">
+    <button class="secondary" onclick="openActivities()">
+      📁 My Activities
+    </button>
+  </div>
+
+  <div class="ribbon-center" id="ribbonSaveStatus">
+    💾 Saved
+  </div>
+
+  <div class="ribbon-right">
+    <button class="primary-blue" onclick="createNewExercise()">
+      ➕ Create Activity
+    </button>
+  </div>
+
 </div>
 <!-- Step 2 -->
 <div class="card" id="exerciseDetailsCard" style="display:none;">
@@ -777,7 +787,6 @@ function setExerciseProgress(percent, message) {
     });
 
     const _asEl = document.getElementById("autoSaveStatus"); if (_asEl) _asEl.textContent = "✓ Auto saved at " + time;
-    updateRibbonAutoSave("Auto saved at " + time);
 }
   function createNewExercise() {
     window.open(location.pathname + "?mode=new", "_blank", "noopener");
@@ -787,23 +796,44 @@ function setExerciseProgress(percent, message) {
     // Always save recovery data first
     saveLocalProgress();
 
+    // NEW ribbon behaviour
+    updateSaveStatus("saving");
+
     try {
 
-        // Save to the teacher's saved exercises
         await autoSaveExercise();
 
-        // Only show success after everything completed
-        updateAutoSaveStatus();
+        updateSaveStatus("saved");
+
+        // Optional: keep old hook if updateAutoSaveStatus does something useful
+        if (typeof updateAutoSaveStatus === "function") {
+            updateAutoSaveStatus();
+        }
 
     } catch (err) {
 
         console.warn("Auto-save failed:", err);
 
-        const _asEl2 = document.getElementById("autoSaveStatus"); if (_asEl2) _asEl2.textContent = "⚠ Auto save failed";
-        updateRibbonAutoSave("⚠ Auto save failed");
+        updateSaveStatus("saving"); // optional visual fallback
+        const el = document.getElementById("ribbonSaveStatus");
+        if (el) el.textContent = "⚠ Save failed";
 
     }
 
+}
+  function updateSaveStatus(state) {
+  const el = document.getElementById("ribbonSaveStatus");
+  if (!el) return;
+
+  if (state === "saving") {
+    el.textContent = "💾 Saving...";
+  }
+
+  if (state === "saved") {
+    const now = new Date();
+    const time = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    el.textContent = `💾 Saved (${time})`;
+  }
 }
 function checkAndRestoreLocalProgress() {
   const params = new URLSearchParams(window.location.search);
@@ -862,7 +892,7 @@ revealStep("step4Card");
 revealStep("step5Card");
 
 renderTranscript();
-showStatusRibbon();
+updateSaveStatus("saved");
 
 showExerciseSaveButton();
       if (window._lastLessonId) {
