@@ -991,6 +991,8 @@ function handleCredentialResponse(response) {
 
 function initGoogleSignIn() {
   if (!window.google || !google.accounts || !google.accounts.id) return;
+  // Automatically restore a previously approved Google session
+    // so teachers don't have to sign in every time they open the app.
   google.accounts.id.initialize({ client_id: GOOGLE_CLIENT_ID, callback: handleCredentialResponse, auto_select: true });
   google.accounts.id.renderButton(document.getElementById('gSignInBtn'), { theme: 'outline', size: 'large' });
   google.accounts.id.prompt();
