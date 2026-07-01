@@ -1178,8 +1178,7 @@ exerciseProgressTarget = 0;
 
 document.getElementById("exerciseProgressBar").style.width = "0%";
     setExerciseProgress(40, "Processing video...");
-    revealStep("exerciseDetailsCard");
-    revealStep("step2Card");
+   goToStep(3);
 
     await waitForBunnyReady();
     setExerciseProgress(95, "Generating transcript...");
@@ -1328,17 +1327,16 @@ async function useGoogleDriveLink() {
     status.className = "status success";
     status.innerText = "✅ Imported from Google Drive! Processing & transcribing…";
 
-    revealStep("exerciseDetailsCard");
-
 setExerciseProgress(25, "Importing from Google Drive...");
 
-revealStep("step2Card");
+goToStep(3);
 
 await waitForBunnyReady();
 
 setExerciseProgress(95, "Generating transcript...");
 
 await autoTranscribe();
+    goToStep(4);
 
   } catch (err) {
     clearInterval(fakeTimer);
