@@ -661,13 +661,19 @@ video, iframe.video-player{
     4: "step3Card"
   };
 
-  // hide all steps
+  // hide everything first
   Object.values(steps).forEach(id => {
     const el = document.getElementById(id);
     if (el) el.style.display = "none";
   });
 
-  // show only selected step
+  // ALWAYS show Activity card during steps 2–4
+  if (step >= 2) {
+    const activity = document.getElementById("exerciseDetailsCard");
+    if (activity) activity.style.display = "block";
+  }
+
+  // show main step view
   const active = document.getElementById(steps[step]);
   if (active) active.style.display = "block";
 }
