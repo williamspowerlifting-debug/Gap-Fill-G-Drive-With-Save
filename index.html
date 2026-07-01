@@ -652,6 +652,25 @@ video, iframe.video-player{
 </div>
 
 <script>
+  function goToStep(step) {
+
+  const steps = {
+    1: "step1Card",
+    2: "exerciseDetailsCard",
+    3: "step2Card",
+    4: "step3Card"
+  };
+
+  // hide all steps
+  Object.values(steps).forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.style.display = "none";
+  });
+
+  // show only selected step
+  const active = document.getElementById(steps[step]);
+  if (active) active.style.display = "block";
+}
 // ============================================================
 // 🌐 Global state
 // ============================================================
