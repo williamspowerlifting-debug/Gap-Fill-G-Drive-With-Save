@@ -413,7 +413,7 @@ video, iframe.video-player{
     </div>
     <div id="headerRight" style="display:flex;align-items:center;gap:10px;">
       <button class="primary-blue" onclick="openSavedExercises()" style="white-space:nowrap;margin-top:6px;">
-        📚 My Activities
+        My Activities
       </button>
       <div id="authArea" style="display:flex;align-items:center;gap:8px;">
         <div id="gSignInBtn"></div>
@@ -455,7 +455,7 @@ video, iframe.video-player{
 
   <div class="ribbon-left">
     <button class="secondary" onclick="openActivities()">
-      📁 My Activities
+      My Activities
     </button>
   </div>
 
@@ -465,7 +465,7 @@ video, iframe.video-player{
 
   <div class="ribbon-right">
     <button class="primary-blue" onclick="createNewExercise()">
-      ➕ Create Activity
+      Create Activity
     </button>
   </div>
 
@@ -512,7 +512,7 @@ video, iframe.video-player{
 <button id="newExerciseBtn"
         class="primary-blue"
         onclick="createNewExercise()">
-    ➕ Create Activity
+    Create Activity
 </button>
   <button
       class="secondary full"
@@ -2324,7 +2324,7 @@ async function saveExerciseManually() {
     currentExerciseId = data.exerciseId;
 
     if (saveStatus) { saveStatus.className = "status success"; saveStatus.innerText = "✅ Activity saved!"; }
-    updateRibbonSaveStatus('saved');
+    updateSaveStatus("saved");
     // 💡 HOOK 3: Clear the local safety scratchpad upon full server synchronization
   clearLocalProgressCache();
   }
@@ -2459,8 +2459,7 @@ async function openSavedExercise(exerciseId) {
 
     renderTranscript();
     showExerciseSaveButton();
-    showStatusRibbon();
-    updateRibbonSaveStatus('saved');
+    updateSaveStatus("saved");
 
     // If there's an existing student link, restore it
    const linkBox = document.getElementById("link");
@@ -2490,12 +2489,6 @@ linkBox.className = "status";
 }
 
     document.getElementById("step2Card").scrollIntoView({ behavior: "smooth" });
-
-    const saveStatus = document.getElementById("saveStatus");
-    if (saveStatus) {
-      saveStatus.className = "status success";
-      saveStatus.innerText = "✅ Activity loaded. Make changes and save again to update.";
-    }
 
   } catch (e) {
     list.innerHTML = '<p style="color:#991b1b;">❌ ' + e.message + '</p>';
