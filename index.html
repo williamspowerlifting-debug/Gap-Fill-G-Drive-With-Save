@@ -621,7 +621,7 @@ video, iframe.video-player{
     <ul>
       <li><b>Preview</b> — See what students will see.</li>
       <li><b>Student Link</b> — Copy and send. No signup needed.</li>
-      <li><b>Save Exercise</b> — Saves to your Saved Exercises list on this browser. Sign in with Google to sync your exercises across devices.</li>
+      <li><b>Save Activity</b> — Saves to your Saved Activities list on this browser. Sign in with Google to sync your activities across devices.</li>
     </ul>
     <h3>Saved Activities</h3>
     <p>Click <b>📚 Saved Activity</b> at any time to see all exercises you've created.
@@ -902,7 +902,7 @@ window.openSavedExercises = async function fallbackOpenSavedExercises() {
     if (list) list.innerHTML = '<p style="color:#999;">Loading…</p>';
 
     const res = await fetch(WORKER + "/list-teacher-exercises?teacherId=" + encodeURIComponent(getTeacherId()));
-    if (!res.ok) throw new Error("Could not load exercises");
+    if (!res.ok) throw new Error("Could not load activities");
     const data = await res.json();
     const exercises = data.exercises || [];
 
@@ -2279,7 +2279,7 @@ async function saveExerciseManually() {
 
     currentExerciseId = data.exerciseId;
 
-    if (saveStatus) { saveStatus.className = "status success"; saveStatus.innerText = "✅ Exercise saved!"; }
+    if (saveStatus) { saveStatus.className = "status success"; saveStatus.innerText = "✅ Activity saved!"; }
     updateRibbonSaveStatus('saved');
     // 💡 HOOK 3: Clear the local safety scratchpad upon full server synchronization
   clearLocalProgressCache();
@@ -2290,7 +2290,7 @@ async function saveExerciseManually() {
   }
   finally {
     btn.disabled = false;
-    btn.innerText = "💾 Save Exercise";
+    btn.innerText = "💾 Save Activity";
   }
 }
 // ============================================================
@@ -2304,7 +2304,7 @@ async function openSavedExercises() {
 
   try {
     const res = await fetch(WORKER + "/list-teacher-exercises?teacherId=" + encodeURIComponent(getTeacherId()));
-    if (!res.ok) throw new Error("Could not load exercises");
+    if (!res.ok) throw new Error("Could not load activity");
     const data = await res.json();
     const exercises = data.exercises || [];
 
@@ -2365,7 +2365,7 @@ async function openSavedExercise(exerciseId) {
   try {
     const res = await fetch(WORKER + "/load-teacher-exercise?teacherId=" +
       encodeURIComponent(getTeacherId()) + "&exerciseId=" + encodeURIComponent(exerciseId));
-    if (!res.ok) throw new Error("Could not load exercise");
+    if (!res.ok) throw new Error("Could not load activity");
     const ex = await res.json();
 
     closeSavedExercises();
@@ -2451,7 +2451,7 @@ linkBox.className = "status";
     const saveStatus = document.getElementById("saveStatus");
     if (saveStatus) {
       saveStatus.className = "status success";
-      saveStatus.innerText = "✅ Exercise loaded. Make changes and save again to update.";
+      saveStatus.innerText = "✅ Activity loaded. Make changes and save again to update.";
     }
 
   } catch (e) {
@@ -2470,7 +2470,7 @@ async function generateLinkForSaved(exerciseId) {
 }
 
 async function deleteSavedExercise(exerciseId) {
-  if (!confirm("Delete this exercise? This cannot be undone.")) return;
+  if (!confirm("Delete this Activity? This cannot be undone.")) return;
   try {
     const idToken = localStorage.getItem('idToken') || null;
     const body = { teacherId: getTeacherId(), exerciseId, idToken };
@@ -2529,11 +2529,11 @@ function startStudent(rawLesson, previewMode) {
       '<div style="margin-bottom:14px;">' +
         '<button class="secondary" onclick="exitPreview()">⬅ Back to editor</button>' +
       '</div>' +
-      '<h1>🎧 Listening Exercise</h1>' +
+      '<h1>🎧 Listening Activity</h1>' +
       buildStudentMarkup(finalLesson);
   } else {
     document.getElementById("app").innerHTML =
-      '<h1>🎧 Listening Exercise</h1>' + buildStudentMarkup(finalLesson);
+      '<h1>🎧 Listening Activity</h1>' + buildStudentMarkup(finalLesson);
   }
 
   studentState.videoEl = document.getElementById("studentVideo");
