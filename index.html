@@ -658,28 +658,55 @@ video, iframe.video-player{
 <script>
   function goToStep(step) {
 
-  const steps = {
-    1: "step1Card",
-    2: "exerciseDetailsCard",
-    3: "step2Card",
-    4: "step3Card"
-  };
+  // Main sections
+  const uploadCard = document.getElementById("step1Card");
+  const detailsCard = document.getElementById("exerciseDetailsCard");
+  const videoCard = document.getElementById("step2Card");
+  const gapsCard = document.getElementById("step3Card");
+  const transcriptCard = document.getElementById("step4Card");
+  const publishCard = document.getElementById("step5Card");
 
-  // hide everything first
-  Object.values(steps).forEach(id => {
-    const el = document.getElementById(id);
+  // Navigation
+  const ribbon = document.getElementById("statusRibbon");
+  const headerActivities = document.getElementById("myActivitiesBtn");
+
+  // Hide everything first
+  [
+    uploadCard,
+    detailsCard,
+    videoCard,
+    gapsCard,
+    transcriptCard,
+    publishCard
+  ].forEach(el => {
     if (el) el.style.display = "none";
   });
 
-  // ALWAYS show Activity card during steps 2–4
-  if (step >= 2) {
-    const activity = document.getElementById("exerciseDetailsCard");
-    if (activity) activity.style.display = "block";
+  if (step === 1) {
+
+    // Upload screen
+    if (uploadCard) uploadCard.style.display = "block";
+
+    // Header button visible
+    if (headerActivities) headerActivities.style.display = "";
+
+    // Ribbon hidden
+    if (ribbon) ribbon.style.display = "none";
+
+    return;
   }
 
-  // show main step view
-  const active = document.getElementById(steps[step]);
-  if (active) active.style.display = "block";
+  // Editor screens
+
+  if (headerActivities) headerActivities.style.display = "none";
+  if (ribbon) ribbon.style.display = "flex";
+
+  if (detailsCard) detailsCard.style.display = "block";
+
+  if (step >= 3 && videoCard) videoCard.style.display = "block";
+  if (step >= 4 && gapsCard) gapsCard.style.display = "block";
+  if (step >= 5 && transcriptCard) transcriptCard.style.display = "block";
+  if (step >= 6 && publishCard) publishCard.style.display = "block";
 }
 // ============================================================
 // 🌐 Global state
