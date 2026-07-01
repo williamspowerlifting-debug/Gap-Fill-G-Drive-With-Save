@@ -483,7 +483,7 @@ video, iframe.video-player{
       id="exerciseName"
       placeholder="e.g. Unit 3 — Shopping dialogue"
       style="margin-bottom:8px;"
-      oninput="saveLocalProgress(); updateRibbonName();">
+      oninput="handleTitleChange()">
   </div>
 
   <!-- Progress Area -->
@@ -793,10 +793,8 @@ function setExerciseProgress(percent, message) {
 }
   async function performAutoSave(reason = "") {
 
-    // Always save recovery data first
     saveLocalProgress();
 
-    // NEW ribbon behaviour
     updateSaveStatus("saving");
 
     try {
@@ -805,7 +803,6 @@ function setExerciseProgress(percent, message) {
 
         updateSaveStatus("saved");
 
-        // Optional: keep old hook if updateAutoSaveStatus does something useful
         if (typeof updateAutoSaveStatus === "function") {
             updateAutoSaveStatus();
         }
@@ -814,7 +811,6 @@ function setExerciseProgress(percent, message) {
 
         console.warn("Auto-save failed:", err);
 
-        updateSaveStatus("saving"); // optional visual fallback
         const el = document.getElementById("ribbonSaveStatus");
         if (el) el.textContent = "⚠ Save failed";
 
