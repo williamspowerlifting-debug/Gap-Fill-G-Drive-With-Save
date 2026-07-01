@@ -308,7 +308,6 @@ video, iframe.video-player{
   background: #d1d5db;
   flex-shrink: 0;
 }
-#ribbonSaveStatus.ribbon-unsaved { background: #ede9fe; color: #6b21a8; }
 #ribbonSaveStatus.ribbon-saved   { background: #dcfce7; color: #166534; }
 #ribbonSaveStatus.ribbon-saving  { background: #fef9c3; color: #854d0e; }
 /* Student view */
@@ -1946,7 +1945,6 @@ if (btn) btn.style.display = "";
   renderTranscript();
   // 💡 SAVE HERE INSTEAD: Silently backup the progress data now that editing is finished
   performAutoSave("Transcript edited");
-  updateRibbonSaveStatus('unsaved');
 }
 function cancelTranscriptEdit() {
   if (!editSnapshot) return;
@@ -2068,7 +2066,6 @@ async function makeItHappen() {
 
     // Auto-save after AI generates gaps
    await performAutoSave("Gaps generated");
-   updateRibbonSaveStatus('unsaved');
 
   } catch (err) {
     console.error(err);
@@ -2126,10 +2123,9 @@ function updateRibbonName() {
 function updateRibbonSaveStatus(state) {
   const el = document.getElementById('ribbonSaveStatus');
   if (!el) return;
-  el.classList.remove('ribbon-unsaved', 'ribbon-saved', 'ribbon-saving');
+  el.classList.remove('ribbon-saved', 'ribbon-saving');
   if (state === 'saving')     { el.textContent = '🔄 Saving…';  el.classList.add('ribbon-saving');  }
   else if (state === 'saved') { el.textContent = '🟢 Saved';    el.classList.add('ribbon-saved');   }
-  else                        { el.textContent = '🟣 Unsaved';  el.classList.add('ribbon-unsaved'); }
 }
 function updateRibbonAutoSave(text) {
   const el = document.getElementById('ribbonAutoSave');
@@ -2240,7 +2236,6 @@ async function generateLink() {
 
     // Auto-save exercise with the student link ID attached
     await performAutoSave("Student link generated");
-    updateRibbonSaveStatus("unsaved");
   } catch (e) {
     linkBox.className = "status error";
     linkBox.innerHTML = "❌ Could not save lesson: " + e.message;
@@ -2335,7 +2330,6 @@ async function saveExerciseManually() {
   }
   catch (e) {
     if (saveStatus) { saveStatus.className = "status error"; saveStatus.innerText = "❌ Could not save: " + e.message; }
-    updateRibbonSaveStatus('unsaved');
   }
   finally {
     btn.disabled = false;
@@ -2956,7 +2950,6 @@ document.addEventListener("click", function (e) {
     
     // Toggle the data memory state directly
     wordObj.isGap = !wordObj.isGap;
-    updateRibbonSaveStatus('unsaved');
     
     // Update the UI immediately without destroying or re-rendering any nodes
     if (wordObj.isGap) {
