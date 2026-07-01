@@ -276,38 +276,40 @@ video, iframe.video-player{
 }
 
 
-/* ── Status Ribbon ── */
 #statusRibbon {
   display: none;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 10px 18px;
   background: #ffffff;
-  color: #111827;
-  border-radius: 12px;
-  padding: 12px 20px;
-  margin-bottom: 16px;
-  align-items: center;
-  gap: 12px;
-  flex-wrap: wrap;
-  font-size: 14px;
-  box-shadow: 0 1px 4px rgba(0,0,0,0.10);
-  border: 1px solid #e5e7eb;
+  border-bottom: 1px solid #e5e7eb;
 }
-#statusRibbon.visible { display: flex; }
-.ribbon-badge {
+
+#statusRibbon.visible {
   display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 5px 13px;
-  border-radius: 20px;
-  background: #f3f4f6;
-  color: #111827;
-  white-space: nowrap;
-  font-weight: 500;
 }
-.ribbon-divider {
-  width: 1px; height: 22px;
-  background: #d1d5db;
-  flex-shrink: 0;
+
+.ribbon-left,
+.ribbon-center,
+.ribbon-right {
+  flex: 1;
 }
+
+.ribbon-left {
+  text-align: left;
+}
+
+.ribbon-center {
+  text-align: center;
+}
+
+.ribbon-right {
+  text-align: right;
+  font-weight: 600;
+  color: #16a34a;
+}
+
 #ribbonSaveStatus.ribbon-saved   { background: #dcfce7; color: #166534; }
 #ribbonSaveStatus.ribbon-saving  { background: #fef9c3; color: #854d0e; }
 /* Student view */
@@ -457,21 +459,22 @@ video, iframe.video-player{
 <div id="statusRibbon" class="status-ribbon">
 
   <div class="ribbon-left">
-    <button class="primary-blue" onclick="openSavedExercises()">
-    My Activities
-</button>
-  </div>
-
-  <div class="ribbon-right" id="ribbonSaveStatus">
-    💾 Saved
+    <button class="secondary" onclick="openSavedExercises()">
+      My Activities
+    </button>
   </div>
 
   <div class="ribbon-center">
-    <button class="primary-blue" onclick="createNewExercise()">
+    <button class="secondary" onclick="createNewExercise()">
       Create Activity
     </button>
   </div>
 
+  <div class="ribbon-right" id="ribbonSaveStatus">
+    🟢 Saved
+  </div>
+
+</div>
 </div>
 <!-- Step 2 -->
 <div class="card" id="exerciseDetailsCard" style="display:none;">
