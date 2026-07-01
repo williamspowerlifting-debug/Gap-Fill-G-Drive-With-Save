@@ -2472,12 +2472,8 @@ async function openSavedExercise(exerciseId) {
       '<source src="' + escapeAttr(ex.videoUrl) + '"></video>';
     builderPlayer = document.getElementById("builderPlayer");
 
-    // Reveal all steps
-    revealStep("exerciseDetailsCard");
-    revealStep("step2Card");
-    revealStep("step3Card");
-    revealStep("step4Card");
-    revealStep("step5Card");
+   // Switch to the editor view
+goToStep(6);
 
     renderTranscript();
     showExerciseSaveButton();
