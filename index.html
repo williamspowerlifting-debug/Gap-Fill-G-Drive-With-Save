@@ -801,6 +801,7 @@ revealStep("step5Card");
 
 renderTranscript();
 showStatusRibbon();
+hideHeaderActivitiesButton();
 
 showExerciseSaveButton();
       if (window._lastLessonId) {
@@ -2303,6 +2304,7 @@ async function openSavedExercise(exerciseId) {
     renderTranscript();
     showExerciseSaveButton();
     showStatusRibbon();
+    hideHeaderActivitiesButton();
     updateRibbonSaveStatus('saved');
 
     // If there's an existing student link, restore it
