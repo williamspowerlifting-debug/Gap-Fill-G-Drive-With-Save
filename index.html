@@ -479,7 +479,6 @@ video, iframe.video-player{
 <div id="statusRibbon">
   <button class="ribbon-btn" onclick="openSavedExercises()">📚 My Activities</button>
   <button class="ribbon-btn" onclick="createNewExercise()">➕ Create Activity</button>
-  <button id="ribbonSaveBtn" class="ribbon-btn">💾 Save</button>
   <span class="ribbon-save" id="ribbonSaveStatus">💾 Saved --:--:--</span>
 </div>
 <!-- Step 2 -->
@@ -729,25 +728,18 @@ function setExerciseProgress(percent, message) {
   function createNewExercise() {
     window.open(location.pathname + "?mode=new", "_blank", "noopener");
 }
- async function performAutoSave(reason = "") {
-  saveLocalProgress();
-
-  if (!sentences.length) return;
-
-  const _rsEl = document.getElementById("ribbonSaveStatus");
-
-  try {
+  async function performAutoSave(reason = "") {
+    saveLocalProgress();
+    if (!sentences.length) return;
+    const _rsEl = document.getElementById("ribbonSaveStatus");
     if (_rsEl) _rsEl.textContent = "🔄 Saving…";
-
-    await autoSaveExercise();
-
-    updateAutoSaveStatus();
-
-    if (_rsEl) _rsEl.textContent = "✅ Saved";
-  } catch (err) {
-    console.warn("Auto-save failed:", err);
-    if (_rsEl) _rsEl.textContent = "⚠ Save failed";
-  }
+    try {
+        await autoSaveExercise();
+        updateAutoSaveStatus();
+    } catch (err) {
+        console.warn("Auto-save failed:", err);
+        if (_rsEl) _rsEl.textContent = "⚠ Save failed";
+    }
 }
 function checkAndRestoreLocalProgress() {
   const params = new URLSearchParams(window.location.search);
@@ -2136,45 +2128,33 @@ function buildExercisePayload(lessonId) {
 
 async function autoSaveExercise(lessonId) {
   if (!sentences.length) return;
-
-  const payload = buildExercisePayload(lessonId);
-
-  const res = await fetch(WORKER + "/save-teacher-exercise", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(payload)
-  });
-
-  let data;
   try {
-    data = await res.json();
+    const payload = buildExercisePayload(lessonId);
+    const res = await fetch(WORKER + "/save-teacher-exercise", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload)
+    });
+    const data = await res.json();
+    if (res.ok && data.exerciseId) {
+      currentExerciseId = data.exerciseId;
+    }
   } catch (e) {
-    throw new Error("Invalid JSON response from server");
+    console.warn("Auto-save failed silently:", e);
   }
-
-  if (!res.ok) {
-    throw new Error(data?.error || "Auto-save request failed");
-  }
-
-  if (!data.exerciseId) {
-    throw new Error("No exerciseId returned from server");
-  }
-
-  currentExerciseId = data.exerciseId;
-  return data.exerciseId;
 }
 
 async function saveExerciseManually() {
- if (!sentences || sentences.length === 0) {
+  if (!sentences.length) {
     alert("Nothing to save yet.");
     return;
   }
 
- const btn = document.getElementById("ribbonSaveBtn");
-const saveStatus = document.getElementById("saveStatus"); // optional element
+  const btn = document.getElementById("saveExBtn");
+  const saveStatus = document.getElementById("saveStatus");
 
-  if (btn) btn.disabled = true;
-  if (btn) btn.innerText = "💾 Saving…";
+  btn.disabled = true;
+  btn.innerText = "💾 Saving…";
   updateRibbonSaveStatus('saving');
 
   if (saveStatus) { saveStatus.className = "status"; saveStatus.innerText = "Saving…"; }
@@ -2206,10 +2186,10 @@ const saveStatus = document.getElementById("saveStatus"); // optional element
     if (saveStatus) { saveStatus.className = "status error"; saveStatus.innerText = "❌ Could not save: " + e.message; }
     updateRibbonSaveStatus('unsaved');
   }
-  if (btn) {
-  btn.disabled = false;
-  btn.innerText = "💾 Save";
-}
+  finally {
+    btn.disabled = false;
+    btn.innerText = "💾 Save Exercise";
+  }
 }
 // ============================================================
 // 📚 SAVED EXERCISES PANEL
@@ -2774,7 +2754,6 @@ function showAnswers() {
   }).join("");
   review.innerHTML = '<h3 style="text-align:left;">Answer review</h3>' + html;
 }
- 
 </script>
 
 <script>
@@ -2901,21 +2880,7 @@ function scheduleActivityNameSave() {
   clearTimeout(_activityNameSaveTimer);
   _activityNameSaveTimer = setTimeout(() => performAutoSave("Name changed"), 800);
 }
-function bindRibbonSaveButton() {
-  const btn = document.getElementById("ribbonSaveBtn");
 
-  if (!btn) return;
-
-  // prevent duplicate listeners
-  btn.onclick = async () => {
-    console.log("Manual save clicked");
-    await saveExerciseManually();
-  };
-}
-
-// run multiple times safely
-bindRibbonSaveButton();
-window.addEventListener("load", bindRibbonSaveButton);
 </script>
 
 </body>
