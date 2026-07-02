@@ -546,8 +546,7 @@ video, iframe.video-player{
         gap:10px;
         margin-top:12px;
      ">
-    <button class="secondary" onclick="undoSentences()">↩ Undo</button>
-    <button class="secondary" onclick="redoSentences()">↪ Redo</button>
+    
     <button class="secondary" onclick="cancelTranscriptEdit()">❌ Cancel Changes</button>
     <button class="success" onclick="finishTranscriptEdit()">✅ Apply Changes</button>
 
@@ -1515,8 +1514,12 @@ function toggleEditMode() {
   updateHelpTooltip(editModeActive);
   const btn = document.getElementById("editModeBtn");
   const footer = document.getElementById("editFooter");
+  const undoBtn = document.getElementById("undoBtn");
+  const redoBtn = document.getElementById("redoBtn");
   editSnapshot = JSON.parse(JSON.stringify(sentences));
   if (btn) btn.style.display = "none";
+  if (undoBtn) undoBtn.style.display = "none";
+  if (redoBtn) redoBtn.style.display = "none";
   if (footer) footer.style.display = "flex";
   
   // Call the function to switch the DOM into editable mode
@@ -1789,6 +1792,11 @@ function finishTranscriptEdit() {
 
   editSnapshot   = null;
   editModeActive = false;
+  const undoBtn = document.getElementById("undoBtn");
+const redoBtn = document.getElementById("redoBtn");
+
+if (undoBtn) undoBtn.style.display = "";
+if (redoBtn) redoBtn.style.display = "";
   updateHelpTooltip(editModeActive);
 
   box.contentEditable = "false";
@@ -1815,7 +1823,11 @@ function cancelTranscriptEdit() {
   sentences      = JSON.parse(JSON.stringify(editSnapshot));
   editSnapshot   = null;
   editModeActive = false;
+  const undoBtn = document.getElementById("undoBtn");
+const redoBtn = document.getElementById("redoBtn");
 
+if (undoBtn) undoBtn.style.display = "";
+if (redoBtn) redoBtn.style.display = "";
   box.contentEditable = "false";
   box.classList.remove("edit-mode");
 
