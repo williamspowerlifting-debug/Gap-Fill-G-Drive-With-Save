@@ -479,6 +479,7 @@ video, iframe.video-player{
 <div id="statusRibbon">
   <button class="ribbon-btn" onclick="openSavedExercises()">📚 My Activities</button>
   <button class="ribbon-btn" onclick="createNewExercise()">➕ Create Activity</button>
+  <button id="ribbonSaveBtn" class="ribbon-btn">💾 Save</button>
   <span class="ribbon-save" id="ribbonSaveStatus">💾 Saved --:--:--</span>
 </div>
 <!-- Step 2 -->
@@ -728,18 +729,25 @@ function setExerciseProgress(percent, message) {
   function createNewExercise() {
     window.open(location.pathname + "?mode=new", "_blank", "noopener");
 }
-  async function performAutoSave(reason = "") {
-    saveLocalProgress();
-    if (!sentences.length) return;
-    const _rsEl = document.getElementById("ribbonSaveStatus");
+ async function performAutoSave(reason = "") {
+  saveLocalProgress();
+
+  if (!sentences.length) return;
+
+  const _rsEl = document.getElementById("ribbonSaveStatus");
+
+  try {
     if (_rsEl) _rsEl.textContent = "🔄 Saving…";
-    try {
-        await autoSaveExercise();
-        updateAutoSaveStatus();
-    } catch (err) {
-        console.warn("Auto-save failed:", err);
-        if (_rsEl) _rsEl.textContent = "⚠ Save failed";
-    }
+
+    await autoSaveExercise();
+
+    updateAutoSaveStatus();
+
+    if (_rsEl) _rsEl.textContent = "✅ Saved";
+  } catch (err) {
+    console.warn("Auto-save failed:", err);
+    if (_rsEl) _rsEl.textContent = "⚠ Save failed";
+  }
 }
 function checkAndRestoreLocalProgress() {
   const params = new URLSearchParams(window.location.search);
@@ -2128,20 +2136,32 @@ function buildExercisePayload(lessonId) {
 
 async function autoSaveExercise(lessonId) {
   if (!sentences.length) return;
+
+  const payload = buildExercisePayload(lessonId);
+
+  const res = await fetch(WORKER + "/save-teacher-exercise", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload)
+  });
+
+  let data;
   try {
-    const payload = buildExercisePayload(lessonId);
-    const res = await fetch(WORKER + "/save-teacher-exercise", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload)
-    });
-    const data = await res.json();
-    if (res.ok && data.exerciseId) {
-      currentExerciseId = data.exerciseId;
-    }
+    data = await res.json();
   } catch (e) {
-    console.warn("Auto-save failed silently:", e);
+    throw new Error("Invalid JSON response from server");
   }
+
+  if (!res.ok) {
+    throw new Error(data?.error || "Auto-save request failed");
+  }
+
+  if (!data.exerciseId) {
+    throw new Error("No exerciseId returned from server");
+  }
+
+  currentExerciseId = data.exerciseId;
+  return data.exerciseId;
 }
 
 async function saveExerciseManually() {
@@ -2754,6 +2774,9 @@ function showAnswers() {
   }).join("");
   review.innerHTML = '<h3 style="text-align:left;">Answer review</h3>' + html;
 }
+  document.getElementById("ribbonSaveBtn").addEventListener("click", async () => {
+  await saveExerciseManually();
+});
 </script>
 
 <script>
