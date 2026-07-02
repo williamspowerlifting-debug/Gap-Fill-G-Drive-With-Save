@@ -189,6 +189,21 @@ video, iframe.video-player{
 }
 .transcript-word.gap:hover{background:#fbbf24;}
 .transcript-sentence{margin-bottom:6px;padding:4px 0;}
+.sentence-box {
+  border: 1.5px dashed #9ca3af;
+  border-radius: 8px;
+  padding: 8px 12px 4px 12px;
+  margin-bottom: 10px;
+  background: #fafafa;
+}
+.merge-btn-row { display:flex; justify-content:flex-end; margin-top:4px; }
+.merge-btn {
+  font-size: 12px; padding: 3px 10px;
+  border: 1px solid #d1d5db; border-radius: 6px;
+  background: #f3f4f6; color: #374151; cursor: pointer;
+  transition: background 0.12s;
+}
+.merge-btn:hover { background: #e0e7ff; border-color: #6366f1; color: #4338ca; }
 .transcript-help{
   background:#eff6ff;border-left:4px solid #3b82f6;
   padding:10px 14px;border-radius:6px;margin-bottom:12px;font-size:14px;color:#1e40af;
@@ -282,34 +297,41 @@ video, iframe.video-player{
   background: #ffffff;
   color: #111827;
   border-radius: 12px;
-  padding: 12px 20px;
+  padding: 10px 16px;
   margin-bottom: 16px;
   align-items: center;
-  gap: 12px;
+  gap: 10px;
   flex-wrap: wrap;
   font-size: 14px;
   box-shadow: 0 1px 4px rgba(0,0,0,0.10);
   border: 1px solid #e5e7eb;
 }
 #statusRibbon.visible { display: flex; }
-.ribbon-badge {
-  display: flex;
-  align-items: center;
-  gap: 6px;
+.ribbon-btn {
+  padding: 7px 16px;
+  border-radius: 8px;
+  border: 1px solid #d1d5db;
+  background: #f9fafb;
+  color: #111827;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.15s, border-color 0.15s;
+}
+.ribbon-btn:hover { background: #f3f4f6; border-color: #9ca3af; }
+.ribbon-save {
+  margin-left: auto;
   padding: 5px 13px;
   border-radius: 20px;
-  background: #f3f4f6;
-  color: #111827;
+  background: #dcfce7;
+  color: #166534;
+  font-weight: 600;
+  font-size: 13px;
   white-space: nowrap;
-  font-weight: 500;
 }
-.ribbon-divider {
-  width: 1px; height: 22px;
-  background: #d1d5db;
-  flex-shrink: 0;
-}
-#ribbonSaveStatus.ribbon-saved   { background: #dcfce7; color: #166534; }
-#ribbonSaveStatus.ribbon-saving  { background: #fef9c3; color: #854d0e; }
+.ribbon-badge { display: none; }
+.ribbon-divider { display: none; }
 /* Student view */
 .student-card{padding:24px;}
 .sentence-display{
@@ -362,7 +384,7 @@ video, iframe.video-player{
 }
 
 /* ── Section-end sidebar ── */
-#step4Flex { display: flex; gap: 12px; align-items: flex-start; }
+#step4Flex { display: block; }
 #sectionSidebar {
   display: none; flex-direction: column; gap: 8px;
   min-width: 76px; padding: 8px;
@@ -408,16 +430,11 @@ video, iframe.video-player{
   <!-- Header row with Saved Exercises button -->
   <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:10px;margin-bottom:4px;">
     <div>
-      <h1 style="margin-bottom:4px;">🎧 Create an Activity</h1>
+      <h1 style="margin-bottom:4px;">Create an Activity</h1>
       <div class="sub">Upload a video. We'll do the rest.</div>
     </div>
     <div id="headerRight" style="display:flex;align-items:center;gap:10px;">
-      <button id="headerActivitiesBtn"
-              class="primary-blue"
-              onclick="openSavedExercises()"
-              style="white-space:nowrap;margin-top:6px;">
-        My Activities
-      </button>
+
       <div id="authArea" style="display:flex;align-items:center;gap:8px;">
         <div id="gSignInBtn"></div>
         <div id="userInfo" style="display:none;align-items:center;gap:8px;">
@@ -428,12 +445,18 @@ video, iframe.video-player{
           </div>
         </div>
       </div>
+      <button
+    id="headerActivitiesBtn"
+    class="secondary"
+    onclick="openSavedExercises()">
+    📚 My Activities
+</button>
     </div>
   </div>
 
   <!-- Step 1 -->
   <div class="card" id="step1Card">
-    <h2>Add Your Video</h2>
+    <h2>Add your video</h2>
     <div class="dropzone" id="dropzone">
       <strong>Click or drag a video here</strong>
       <div class="hint">MP4, MOV, MKV, WEBM, AVI</div>
@@ -454,62 +477,36 @@ video, iframe.video-player{
     <div class="status" id="uploadStatus"></div>
   </div>
 
-<div id="statusRibbon" class="status-ribbon"> <div class="ribbon-left"> <button class="primary-blue" onclick="openSavedExercises()"> My Activities </button> <button class="primary-blue" onclick="createNewExercise()"> Create Activity </button> </div> <div class="ribbon-right" id="ribbonSaveStatus"> 💾 Saved </div> <div class="ribbon-center"></div>
+<div id="statusRibbon">
+  <button class="ribbon-btn" onclick="openSavedExercises()">📚 My Activities</button>
+  <button class="ribbon-btn" onclick="createNewExercise()">➕ Create Activity</button>
+  <span class="ribbon-save" id="ribbonSaveStatus">💾 Saved --:--:--</span>
 </div>
 <!-- Step 2 -->
 <div class="card" id="exerciseDetailsCard" style="display:none;">
   <h2>Activity</h2>
-
-  <div style="margin-bottom:14px;">
-    <label for="exerciseName">Title</label>
-
+  <div style="margin-bottom:6px;">
+    <label for="exerciseName" style="font-weight:600;font-size:15px;margin-bottom:6px;display:block;">Activity name</label>
     <input
       type="text"
       id="exerciseName"
       placeholder="e.g. Unit 3 — Shopping dialogue"
-      style="margin-bottom:8px;"
-      oninput="handleTitleChange()">
+      style="font-size:16px;"
+      oninput="saveLocalProgress(); updateRibbonName(); scheduleActivityNameSave();">
   </div>
-
-  <!-- Progress Area -->
-<div id="exerciseProgressContainer">
-
-  <div class="progress-track">
-    <div
-      id="exerciseProgressBar"
-      class="progress-fill"
-      style="width:0%;">
+  <div id="exerciseProgressContainer">
+    <div class="progress-track">
+      <div id="exerciseProgressBar" class="progress-fill" style="width:0%;"></div>
     </div>
+    <div id="exerciseProgressText" class="status" style="margin-top:8px;">Preparing activity...</div>
   </div>
-
-  <div
-      id="exerciseProgressText"
-      class="status"
-      style="margin-top:8px;">
-      Preparing exercise...
-  </div>
-
-</div>
-
-<!-- Save Button -->
-<div
-    id="exerciseSaveContainer"
-    style="display:none;">
-  <button
-      class="secondary full"
-      onclick="saveExerciseManually()"
-      id="saveExBtn">
-      💾 Save Activity
-  </button>
-</div>
-
-
+  <div id="exerciseSaveContainer" style="display:none;"></div>
 </div>
   
   
   <!-- Step 2 -->
   <div class="card" id="step2Card" style="display:none;">
-    <h2>Your Video</h2>
+    <h2>Your video</h2>
     <div id="videoBox"></div>
     <div class="status" id="transcribeStatus"></div>
   </div>
@@ -536,19 +533,12 @@ video, iframe.video-player{
     <div class="transcript-help">
       💡 <b>Tap or click any word</b> to mark it as a gap. Tap a yellow word to remove the gap.
     </div>
-    <button class="secondary" onclick="toggleEditMode()" id="editModeBtn" style="margin-bottom:12px;">✏️ Edit Text</button>
-    <div id="step4Flex">
-      <div id="sectionSidebar">
-        <h4>Tools</h4>
-        <button class="sidebar-tool" id="sectionEndTool"
-                onclick="toggleSectionEndTool()"
-                title="Activate, then click any sentence to mark it as a section break. Playback audio stops at marked sentences during the student exercise.">
-          ✂️
-          <span>Section<br>End</span>
-        </button>
-      </div>
-      <div class="transcript-box" id="transcriptBox"></div>
+    <div style="display:flex;gap:8px;align-items:center;margin-bottom:12px;flex-wrap:wrap;">
+      <button class="secondary" onclick="toggleEditMode()" id="editModeBtn">✏️ Edit Text</button>
+      <button class="secondary" onclick="undoSentences()" id="undoBtn" title="Undo" disabled>↩ Undo</button>
+      <button class="secondary" onclick="redoSentences()" id="redoBtn" title="Redo" disabled>↪ Redo</button>
     </div>
+    <div class="transcript-box" id="transcriptBox"></div>
   </div>
   <div id="editFooter"
      style="
@@ -558,21 +548,16 @@ video, iframe.video-player{
         margin-top:12px;
      ">
 
-    <button class="secondary"
-            onclick="cancelTranscriptEdit()">
-        ❌ Cancel Changes
-    </button>
-
-    <button class="success"
-            onclick="finishTranscriptEdit()">
-        ✅ Apply Changes
-    </button>
+    <button class="secondary" onclick="undoSentences()">↩ Undo</button>
+    <button class="secondary" onclick="redoSentences()">↪ Redo</button>
+    <button class="secondary" onclick="cancelTranscriptEdit()">❌ Cancel Changes</button>
+    <button class="success" onclick="finishTranscriptEdit()">✅ Apply Changes</button>
 
 </div>
 
   <!-- Step 5 -->
   <div class="card" id="step5Card" style="display:none;">
-    <h2>Preview and Share</h2>
+    <h2>Share</h2>
 
     <div style="margin-bottom:14px;">
     </div>
@@ -611,10 +596,10 @@ video, iframe.video-player{
     <ul>
       <li><b>Preview</b> — See what students will see.</li>
       <li><b>Student Link</b> — Copy and send. No signup needed.</li>
-      <li><b>Save Activity</b> — Saves to your Saved Activities list on this browser. Sign in with Google to sync your activities across devices.</li>
+      <li><b>Save Exercise</b> — Saves to your Saved Exercises list on this browser. Sign in with Google to sync your exercises across devices.</li>
     </ul>
-    <h3>Saved Activities</h3>
-    <p>Click <b>📚 Saved Activity</b> at any time to see all exercises you've created.
+    <h3>My Activities</h3>
+    <p>Click <b>📚 My Activities</b> at any time to see all activities you've created.
     You can open them, copy student links, or delete them.</p>
     <h3>How students use it</h3>
     <ol>
@@ -636,64 +621,12 @@ video, iframe.video-player{
   onclick="closeSavedExercises()">
   ×
 </button>
-    <h2>📚 Saved Activities</h2>
+    <h2>📚 My Activities</h2>
     <div id="savedList"><p style="color:#999;">Loading…</p></div>
   </div>
 </div>
 
 <script>
-  function goToStep(step) {
-
-  // Main sections
-  const uploadCard = document.getElementById("step1Card");
-  const detailsCard = document.getElementById("exerciseDetailsCard");
-  const videoCard = document.getElementById("step2Card");
-  const gapsCard = document.getElementById("step3Card");
-  const transcriptCard = document.getElementById("step4Card");
-  const publishCard = document.getElementById("step5Card");
-
-  // Navigation
-  const ribbon = document.getElementById("statusRibbon");
-  const headerActivities = document.getElementById("myActivitiesBtn");
-
-  // Hide everything first
-  [
-    uploadCard,
-    detailsCard,
-    videoCard,
-    gapsCard,
-    transcriptCard,
-    publishCard
-  ].forEach(el => {
-    if (el) el.style.display = "none";
-  });
-
-  if (step === 1) {
-
-    // Upload screen
-    if (uploadCard) uploadCard.style.display = "block";
-
-    // Header button visible
-    if (headerActivities) headerActivities.style.display = "";
-
-    // Ribbon hidden
-    if (ribbon) ribbon.style.display = "none";
-
-    return;
-  }
-
-  // Editor screens
-
-  if (headerActivities) headerActivities.style.display = "none";
-  if (ribbon) ribbon.style.display = "flex";
-
-  if (detailsCard) detailsCard.style.display = "block";
-
-  if (step >= 3 && videoCard) videoCard.style.display = "block";
-  if (step >= 4 && gapsCard) gapsCard.style.display = "block";
-  if (step >= 5 && transcriptCard) transcriptCard.style.display = "block";
-  if (step >= 6 && publishCard) publishCard.style.display = "block";
-}
 // ============================================================
 // 🌐 Global state
 // ============================================================
@@ -793,50 +726,23 @@ function setExerciseProgress(percent, message) {
         second: "2-digit"
     });
 
-    const _asEl = document.getElementById("autoSaveStatus"); if (_asEl) _asEl.textContent = "✓ Auto saved at " + time;
+    const _rsEl = document.getElementById("ribbonSaveStatus"); if (_rsEl) _rsEl.textContent = "💾 Saved " + time;
 }
   function createNewExercise() {
     window.open(location.pathname + "?mode=new", "_blank", "noopener");
 }
   async function performAutoSave(reason = "") {
-
     saveLocalProgress();
-
-    updateSaveStatus("saving");
-
+    if (!sentences.length) return;
+    const _rsEl = document.getElementById("ribbonSaveStatus");
+    if (_rsEl) _rsEl.textContent = "🔄 Saving…";
     try {
-
         await autoSaveExercise();
-
-        updateSaveStatus("saved");
-
-        if (typeof updateAutoSaveStatus === "function") {
-            updateAutoSaveStatus();
-        }
-
+        updateAutoSaveStatus();
     } catch (err) {
-
         console.warn("Auto-save failed:", err);
-
-        const el = document.getElementById("ribbonSaveStatus");
-        if (el) el.textContent = "⚠ Save failed";
-
+        if (_rsEl) _rsEl.textContent = "⚠ Save failed";
     }
-
-}
-  function updateSaveStatus(state) {
-  const el = document.getElementById("ribbonSaveStatus");
-  if (!el) return;
-
-  if (state === "saving") {
-    el.textContent = "💾 Saving...";
-  }
-
-  if (state === "saved") {
-    const now = new Date();
-    const time = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    el.textContent = `💾 Saved (${time})`;
-  }
 }
 function checkAndRestoreLocalProgress() {
   const params = new URLSearchParams(window.location.search);
@@ -895,7 +801,7 @@ revealStep("step4Card");
 revealStep("step5Card");
 
 renderTranscript();
-updateSaveStatus("saved");
+showStatusRibbon();
 
 showExerciseSaveButton();
       if (window._lastLessonId) {
@@ -960,13 +866,13 @@ window.openSavedExercises = async function fallbackOpenSavedExercises() {
     if (list) list.innerHTML = '<p style="color:#999;">Loading…</p>';
 
     const res = await fetch(WORKER + "/list-teacher-exercises?teacherId=" + encodeURIComponent(getTeacherId()));
-    if (!res.ok) throw new Error("Could not load activities");
+    if (!res.ok) throw new Error("Could not load exercises");
     const data = await res.json();
     const exercises = data.exercises || [];
 
     if (!list) return;
     if (!exercises.length) {
-      list.innerHTML = '<p style="color:#999;text-align:center;padding:24px;">No saved activitiess yet.<br>Create an activity and click <b>💾 Save Activity</b>.</p>';
+      list.innerHTML = '<p style="color:#999;text-align:center;padding:24px;">No saved activities yet.<br>Activities are saved automatically.</p>';
       return;
     }
 
@@ -1049,9 +955,7 @@ function handleCredentialResponse(response) {
 
 function initGoogleSignIn() {
   if (!window.google || !google.accounts || !google.accounts.id) return;
-  // Automatically restore a previously approved Google session
-    // so teachers don't have to sign in every time they open the app.
-  google.accounts.id.initialize({ client_id: GOOGLE_CLIENT_ID, callback: handleCredentialResponse, auto_select: true });
+  google.accounts.id.initialize({ client_id: GOOGLE_CLIENT_ID, callback: handleCredentialResponse });
   google.accounts.id.renderButton(document.getElementById('gSignInBtn'), { theme: 'outline', size: 'large' });
   google.accounts.id.prompt();
   updateAuthUI();
@@ -1210,15 +1114,15 @@ async function handleFileUpload(file) {
     progressBar.innerText = "Done";
     status.className = "status success";
     status.innerText = "✅ Uploaded! Processing video & transcribing...";
-    const headerBtn = document.getElementById("headerActivitiesBtn");
-    if (headerBtn) headerBtn.style.display = "none";
+
     showVideoPlayer();
     exerciseProgressCurrent = 0;
 exerciseProgressTarget = 0;
 
 document.getElementById("exerciseProgressBar").style.width = "0%";
     setExerciseProgress(40, "Processing video...");
-   goToStep(3);
+    revealStep("exerciseDetailsCard");
+    revealStep("step2Card");
 
     await waitForBunnyReady();
     setExerciseProgress(95, "Generating transcript...");
@@ -1303,9 +1207,7 @@ function useVideoLink() {
 
   document.getElementById("uploadStatus").className = "status success";
   document.getElementById("uploadStatus").innerText = "✅ Link loaded.";
-  
-  const headerBtn = document.getElementById("headerActivitiesBtn");
-  if (headerBtn) headerBtn.style.display = "none";
+
   showVideoPlayer();
   revealStep("exerciseDetailsCard");
   revealStep("step2Card");
@@ -1368,18 +1270,18 @@ async function useGoogleDriveLink() {
     progressBar.innerText = "Done";
     status.className = "status success";
     status.innerText = "✅ Imported from Google Drive! Processing & transcribing…";
-const headerBtn = document.getElementById("headerActivitiesBtn");
-if (headerBtn) headerBtn.style.display = "none";
+
+    revealStep("exerciseDetailsCard");
+
 setExerciseProgress(25, "Importing from Google Drive...");
 
-goToStep(3);
+revealStep("step2Card");
 
 await waitForBunnyReady();
 
 setExerciseProgress(95, "Generating transcript...");
 
 await autoTranscribe();
-    goToStep(4);
 
   } catch (err) {
     clearInterval(fakeTimer);
@@ -1509,74 +1411,14 @@ function splitIntoSentences(text) {
 // 🔀 GROUP SENTENCES
 // ============================================================
 function groupSentencesForStudent(rawSentences) {
-  const groups = [];
-  let pending = [];
-  const SHORT_SENTENCE_WORDS = 3;
-  const LONG_SENTENCE_WORDS = 8;
-
-  function flushPending() {
-    if (!pending.length) return;
-    const allWords = [];
-    pending.forEach(p => p.words.forEach(w => allWords.push(w)));
-    // Carry sectionEnd from the last sentence in pending to the group
-    const hasSectionEnd = pending.some(p => p.sectionEnd);
-    groups.push({ words: allWords, startTime: pending[0].startTime, endTime: pending[pending.length - 1].endTime, sectionEnd: hasSectionEnd });
-    pending = [];
-  }
-
-  for (let i = 0; i < rawSentences.length; i++) {
-    const s = rawSentences[i];
-    const wordCount = s.words.length;
-    const isShort = wordCount <= SHORT_SENTENCE_WORDS;
-    const isLong = wordCount >= LONG_SENTENCE_WORDS;
-
-    // Teacher-placed section break: include in pending then force flush
-    if (s.sectionEnd) {
-      pending.push(s);
-      flushPending();
-      continue;
-    }
-
-    if (isShort) { pending.push(s); continue; }
-    if (isLong) {
-      flushPending();
-      groups.push({ words: [...s.words], startTime: s.startTime, endTime: s.endTime, sectionEnd: false });
-      continue;
-    }
-    if (pending.length > 0) {
-      const allWords = [];
-      pending.forEach(p => p.words.forEach(w => allWords.push(w)));
-      s.words.forEach(w => allWords.push(w));
-      groups.push({ words: allWords, startTime: pending[0].startTime, endTime: s.endTime, sectionEnd: false });
-      pending = [];
-    } else {
-      groups.push({ words: [...s.words], startTime: s.startTime, endTime: s.endTime, sectionEnd: false });
-    }
-  }
-  flushPending();
-
-  // Second pass: merge gap-less groups with next — but NEVER merge past a sectionEnd marker
-  const cleanedGroups = [];
-  for (let i = 0; i < groups.length; i++) {
-    const current = groups[i];
-    const hasGap = current.words.some(w => w.isGap);
-    // Keep as-is if it has a gap OR a teacher-placed section break
-    if (hasGap || current.sectionEnd) { cleanedGroups.push(current); continue; }
-    if (i < groups.length - 1) {
-      const next = groups[i + 1];
-      next.words = [...current.words, ...next.words];
-      next.startTime = current.startTime;
-    } else {
-      if (cleanedGroups.length > 0) {
-        const prev = cleanedGroups[cleanedGroups.length - 1];
-        prev.words.push(...current.words);
-        prev.endTime = current.endTime;
-      } else {
-        cleanedGroups.push(current);
-      }
-    }
-  }
-  return cleanedGroups;
+  // Each sentence is its own playable section.
+  // Teachers merge sentences in the editor with the "Merge with next" button.
+  return rawSentences.map(s => ({
+    words: [...s.words],
+    startTime: s.startTime,
+    endTime: s.endTime,
+    sectionEnd: s.sectionEnd || false
+  }));
 }
 
 function buildSentencesFromTranscript(data) {
@@ -1666,8 +1508,6 @@ function toggleEditMode() {
   if (editModeActive) return;
   editModeActive = true;
   updateHelpTooltip(editModeActive);
-  const sidebarEl = document.getElementById("sectionSidebar");
-  if (sidebarEl) sidebarEl.style.display = "flex";
   const btn = document.getElementById("editModeBtn");
   const footer = document.getElementById("editFooter");
   editSnapshot = JSON.parse(JSON.stringify(sentences));
@@ -1939,6 +1779,7 @@ function finishTranscriptEdit() {
   box.removeEventListener("paste", _handleEditPaste);
   box.removeEventListener("keydown", _handleEditBackspace);
 
+  pushUndo();
   rebuildSentencesFromDOM();
 
   editSnapshot   = null;
@@ -2005,28 +1846,22 @@ function handleWordTouchEnd(e, si, wi) {
 // ============================================================
 function renderTranscript() {
   const box = document.getElementById("transcriptBox");
-  // Always ensure the box is read-only when renderTranscript is called
   box.contentEditable = "false";
   box.classList.remove("edit-mode");
-  // Hide section-end sidebar and deactivate the tool
-  const sb = document.getElementById("sectionSidebar");
-  if (sb) sb.style.display = "none";
-  if (sectionEndToolActive) {
-    sectionEndToolActive = false;
-    document.getElementById("sectionEndTool")?.classList.remove("tool-active");
-    box.classList.remove("section-end-mode");
-  }
   if (!sentences.length) { box.innerHTML = "<i>No transcript.</i>"; return; }
   box.innerHTML = sentences.map((s, si) => {
     const wordsHtml = s.words.map((w, wi) => {
       const cls = "transcript-word" + (w.isGap ? " gap" : "");
       const id  = "tw_" + si + "_" + wi;
-            return '<span class="' + cls + '" id="' + id + '" data-sent="' + si +
+      return '<span class="' + cls + '" id="' + id + '" data-sent="' + si +
              '" data-word="' + wi + '">' + escapeHtml(w.text) + '</span>';
     }).join(" ");
-    return '<div class="transcript-sentence">' + wordsHtml + '</div>';
+    const mergeBtn = si < sentences.length - 1
+      ? '<div class="merge-btn-row"><button class="merge-btn" onclick="mergeSentences(' + si + ')">&#8853; Merge with next</button></div>'
+      : '';
+    return '<div class="sentence-box transcript-sentence" data-sent="' + si + '">' + wordsHtml + mergeBtn + '</div>';
   }).join("");
-
+  updateUndoRedoBtns();
 }
 function updateHelpTooltip(editModeActive) {
   const helpEl = document.querySelector(".transcript-help");
@@ -2055,6 +1890,7 @@ function updateHelpTooltip(editModeActive) {
 // ============================================================
 async function makeItHappen() {
   if (!sentences.length) { alert("No transcript yet."); return; }
+  pushUndo();
   const level = document.getElementById("levelSelect").value;
   const btn = document.getElementById("makeBtn");
   btn.disabled = true;
@@ -2128,21 +1964,10 @@ function showStatusRibbon() {
   updateRibbonName();
 }
 function updateRibbonName() {
-  const name = (document.getElementById('exerciseName')?.value || '').trim() || 'Untitled Exercise';
-  const el = document.getElementById('ribbonName');
-  if (el) el.textContent = '🎬 ' + name;
+  // ribbon name badge removed
 }
-function updateRibbonSaveStatus(state) {
-  const el = document.getElementById('ribbonSaveStatus');
-  if (!el) return;
-  el.classList.remove('ribbon-saved', 'ribbon-saving');
-  if (state === 'saving')     { el.textContent = '🔄 Saving…';  el.classList.add('ribbon-saving');  }
-  else if (state === 'saved') { el.textContent = '🟢 Saved';    el.classList.add('ribbon-saved');   }
-}
-function updateRibbonAutoSave(text) {
-  const el = document.getElementById('ribbonAutoSave');
-  if (el) el.textContent = '💾 ' + text;
-}
+function updateRibbonSaveStatus(state) { /* ribbon now shows timestamped save */ }
+function updateRibbonAutoSave(text) { /* merged into updateAutoSaveStatus */ }
 function toggleSectionEndTool() {
   sectionEndToolActive = !sectionEndToolActive;
   const btn = document.getElementById("sectionEndTool");
@@ -2248,6 +2073,7 @@ async function generateLink() {
 
     // Auto-save exercise with the student link ID attached
     await performAutoSave("Student link generated");
+    updateRibbonSaveStatus("unsaved");
   } catch (e) {
     linkBox.className = "status error";
     linkBox.innerHTML = "❌ Could not save lesson: " + e.message;
@@ -2264,7 +2090,7 @@ function copyLink() {
 function buildExercisePayload(lessonId) {
   const lesson = buildLesson();
   const name = (document.getElementById("exerciseName").value.trim()) ||
-    "Exercise " + new Date().toLocaleDateString();
+    "Activity " + new Date().toLocaleDateString();
 
   return {
     teacherId: getTeacherId(),
@@ -2335,17 +2161,17 @@ async function saveExerciseManually() {
 
     currentExerciseId = data.exerciseId;
 
-    if (saveStatus) { saveStatus.className = "status success"; saveStatus.innerText = "✅ Activity saved!"; }
-    updateSaveStatus("saved");
+    updateAutoSaveStatus();
     // 💡 HOOK 3: Clear the local safety scratchpad upon full server synchronization
   clearLocalProgressCache();
   }
   catch (e) {
     if (saveStatus) { saveStatus.className = "status error"; saveStatus.innerText = "❌ Could not save: " + e.message; }
+    updateRibbonSaveStatus('unsaved');
   }
   finally {
     btn.disabled = false;
-    btn.innerText = "💾 Save Activity";
+    btn.innerText = "💾 Save Exercise";
   }
 }
 // ============================================================
@@ -2359,13 +2185,13 @@ async function openSavedExercises() {
 
   try {
     const res = await fetch(WORKER + "/list-teacher-exercises?teacherId=" + encodeURIComponent(getTeacherId()));
-    if (!res.ok) throw new Error("Could not load activity");
+    if (!res.ok) throw new Error("Could not load exercises");
     const data = await res.json();
     const exercises = data.exercises || [];
 
     if (!exercises.length) {
-      list.innerHTML = '<p style="color:#999;text-align:center;padding:24px;">No saved activities yet.<br>' +
-        'Create an activity and click <b>💾 Save Activity</b>.</p>';
+      list.innerHTML = '<p style="color:#999;text-align:center;padding:24px;">No saved exercises yet.<br>' +
+        'Create an exercise and click <b>💾 Save Exercise</b>.</p>';
       return;
     }
 
@@ -2415,7 +2241,7 @@ window.closeSavedExercises = function() {
 
 async function openSavedExercise(exerciseId) {
   const list = document.getElementById("savedList");
-  list.innerHTML = '<p style="color:#999;">Loading exercise…</p>';
+  list.innerHTML = '<p style="color:#999;">Loading activity…</p>';
 
   try {
     const res = await fetch(WORKER + "/load-teacher-exercise?teacherId=" +
@@ -2462,14 +2288,17 @@ async function openSavedExercise(exerciseId) {
       '<source src="' + escapeAttr(ex.videoUrl) + '"></video>';
     builderPlayer = document.getElementById("builderPlayer");
 
-   // Switch to the editor view
-    const headerBtn = document.getElementById("headerActivitiesBtn");
-if (headerBtn) headerBtn.style.display = "none";
-goToStep(6);
+    // Reveal all steps
+    revealStep("exerciseDetailsCard");
+    revealStep("step2Card");
+    revealStep("step3Card");
+    revealStep("step4Card");
+    revealStep("step5Card");
 
     renderTranscript();
     showExerciseSaveButton();
-    updateSaveStatus("saved");
+    showStatusRibbon();
+    updateRibbonSaveStatus('saved');
 
     // If there's an existing student link, restore it
    const linkBox = document.getElementById("link");
@@ -2500,6 +2329,12 @@ linkBox.className = "status";
 
     document.getElementById("step2Card").scrollIntoView({ behavior: "smooth" });
 
+    const saveStatus = document.getElementById("saveStatus");
+    if (saveStatus) {
+      saveStatus.className = "status success";
+      saveStatus.innerText = "✅ Activity loaded.";
+    }
+
   } catch (e) {
     list.innerHTML = '<p style="color:#991b1b;">❌ ' + e.message + '</p>';
   }
@@ -2516,7 +2351,7 @@ async function generateLinkForSaved(exerciseId) {
 }
 
 async function deleteSavedExercise(exerciseId) {
-  if (!confirm("Are you sure you want to delete this activity?\n\nThis action cannot be undone.")) return;
+  if (!confirm("Are you sure you want to delete this activity? This cannot be undone.")) return;
   try {
     const idToken = localStorage.getItem('idToken') || null;
     const body = { teacherId: getTeacherId(), exerciseId, idToken };
@@ -2952,7 +2787,9 @@ document.addEventListener("click", function (e) {
     const wordObj = sentences[sentIdx].words[wordIdx];
     
     // Toggle the data memory state directly
+    pushUndo();
     wordObj.isGap = !wordObj.isGap;
+    performAutoSave("Gap toggled");
     
     // Update the UI immediately without destroying or re-rendering any nodes
     if (wordObj.isGap) {
@@ -2964,6 +2801,67 @@ document.addEventListener("click", function (e) {
     }
   }
 });
+
+
+// ── Undo / Redo ───────────────────────────────────────────────────────────────
+let undoStack = [];
+let redoStack = [];
+
+function pushUndo() {
+  undoStack.push(JSON.stringify(sentences));
+  if (undoStack.length > 50) undoStack.shift();
+  redoStack = [];
+  updateUndoRedoBtns();
+}
+
+function updateUndoRedoBtns() {
+  const u = document.getElementById("undoBtn");
+  const r = document.getElementById("redoBtn");
+  if (u) u.disabled = undoStack.length === 0;
+  if (r) r.disabled = redoStack.length === 0;
+}
+
+function undoSentences() {
+  if (!undoStack.length) return;
+  redoStack.push(JSON.stringify(sentences));
+  sentences = JSON.parse(undoStack.pop());
+  updateUndoRedoBtns();
+  renderTranscript();
+  performAutoSave("Undo");
+}
+
+function redoSentences() {
+  if (!redoStack.length) return;
+  undoStack.push(JSON.stringify(sentences));
+  sentences = JSON.parse(redoStack.pop());
+  updateUndoRedoBtns();
+  renderTranscript();
+  performAutoSave("Redo");
+}
+
+// ── Merge sentences ───────────────────────────────────────────────────────────
+function mergeSentences(si) {
+  if (si < 0 || si >= sentences.length - 1) return;
+  pushUndo();
+  const a = sentences[si];
+  const b = sentences[si + 1];
+  sentences.splice(si, 2, {
+    words: [...a.words, ...b.words],
+    startTime: a.startTime,
+    endTime: b.endTime,
+    sectionEnd: b.sectionEnd || false,
+    originalText: a.words.map(w => w.text).join(" ") + " " + b.words.map(w => w.text).join(" ")
+  });
+  renderTranscript();
+  performAutoSave("Sentences merged");
+}
+
+// ── Debounced auto-save for activity name field ───────────────────────────────
+let _activityNameSaveTimer = null;
+function scheduleActivityNameSave() {
+  clearTimeout(_activityNameSaveTimer);
+  _activityNameSaveTimer = setTimeout(() => performAutoSave("Name changed"), 800);
+}
 
 </script>
 
