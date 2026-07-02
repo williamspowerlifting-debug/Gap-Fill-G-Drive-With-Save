@@ -2774,9 +2774,21 @@ function showAnswers() {
   }).join("");
   review.innerHTML = '<h3 style="text-align:left;">Answer review</h3>' + html;
 }
-  document.getElementById("ribbonSaveBtn").addEventListener("click", async () => {
-  await saveExerciseManually();
-});
+ function bindRibbonSaveButton() {
+  const btn = document.getElementById("ribbonSaveBtn");
+
+  if (!btn) return;
+
+  // prevent duplicate listeners
+  btn.onclick = async () => {
+    console.log("Manual save clicked");
+    await saveExerciseManually();
+  };
+}
+
+// run multiple times safely
+bindRibbonSaveButton();
+window.addEventListener("load", bindRibbonSaveButton);
 </script>
 
 <script>
