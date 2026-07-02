@@ -2165,16 +2165,16 @@ async function autoSaveExercise(lessonId) {
 }
 
 async function saveExerciseManually() {
-  if (!sentences.length) {
+ if (!sentences || sentences.length === 0) {
     alert("Nothing to save yet.");
     return;
   }
 
-  const btn = document.getElementById("saveExBtn");
-  const saveStatus = document.getElementById("saveStatus");
+ const btn = document.getElementById("ribbonSaveBtn");
+const saveStatus = document.getElementById("saveStatus"); // optional element
 
-  btn.disabled = true;
-  btn.innerText = "💾 Saving…";
+  if (btn) btn.disabled = true;
+  if (btn) btn.innerText = "💾 Saving…";
   updateRibbonSaveStatus('saving');
 
   if (saveStatus) { saveStatus.className = "status"; saveStatus.innerText = "Saving…"; }
@@ -2206,10 +2206,10 @@ async function saveExerciseManually() {
     if (saveStatus) { saveStatus.className = "status error"; saveStatus.innerText = "❌ Could not save: " + e.message; }
     updateRibbonSaveStatus('unsaved');
   }
-  finally {
-    btn.disabled = false;
-    btn.innerText = "💾 Save Exercise";
-  }
+  if (btn) {
+  btn.disabled = false;
+  btn.innerText = "💾 Save";
+}
 }
 // ============================================================
 // 📚 SAVED EXERCISES PANEL
