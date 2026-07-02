@@ -479,7 +479,10 @@ video, iframe.video-player{
 <div id="statusRibbon">
   <button class="ribbon-btn" onclick="openSavedExercises()">📚 My Activities</button>
   <button class="ribbon-btn" onclick="createNewExercise()">➕ Create Activity</button>
-  <button id="ribbonSaveBtn" class="ribbon-btn">
+ <button
+    id="ribbonSaveBtn"
+    class="ribbon-btn"
+    onclick="saveExerciseManually()">
     💾 Save
 </button>
   <span class="ribbon-save" id="ribbonSaveStatus">💾 Saved --:--:--</span>
@@ -2152,11 +2155,13 @@ async function saveExerciseManually() {
     return;
   }
 
-  const btn = document.getElementById("saveExBtn");
-  const saveStatus = document.getElementById("saveStatus");
+  const btn = document.getElementById("ribbonSaveBtn");
+const saveStatus = document.getElementById("saveStatus");
 
-  btn.disabled = true;
-  btn.innerText = "💾 Saving…";
+if (btn) {
+    btn.disabled = true;
+    btn.innerText = "💾 Saving...";
+}
   updateRibbonSaveStatus('saving');
 
   if (saveStatus) { saveStatus.className = "status"; saveStatus.innerText = "Saving…"; }
@@ -2188,9 +2193,9 @@ async function saveExerciseManually() {
     if (saveStatus) { saveStatus.className = "status error"; saveStatus.innerText = "❌ Could not save: " + e.message; }
     updateRibbonSaveStatus('unsaved');
   }
-  finally {
+  if (btn) {
     btn.disabled = false;
-    btn.innerText = "💾 Save Exercise";
+    btn.innerText = "💾 Save";
   }
 }
 // ============================================================
