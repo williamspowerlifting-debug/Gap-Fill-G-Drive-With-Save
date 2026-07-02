@@ -434,7 +434,12 @@ video, iframe.video-player{
       <div class="sub">Upload a video. We'll do the rest.</div>
     </div>
     <div id="headerRight" style="display:flex;align-items:center;gap:10px;">
-
+ <button
+    id="headerActivitiesBtn"
+    class="secondary"
+    onclick="openSavedExercises()">
+    📚 My Activities
+</button>
       <div id="authArea" style="display:flex;align-items:center;gap:8px;">
         <div id="gSignInBtn"></div>
         <div id="userInfo" style="display:none;align-items:center;gap:8px;">
@@ -445,12 +450,6 @@ video, iframe.video-player{
           </div>
         </div>
       </div>
-      <button
-    id="headerActivitiesBtn"
-    class="secondary"
-    onclick="openSavedExercises()">
-    📚 My Activities
-</button>
     </div>
   </div>
 
