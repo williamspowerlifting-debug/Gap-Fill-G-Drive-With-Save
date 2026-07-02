@@ -479,10 +479,7 @@ video, iframe.video-player{
 <div id="statusRibbon">
   <button class="ribbon-btn" onclick="openSavedExercises()">📚 My Activities</button>
   <button class="ribbon-btn" onclick="createNewExercise()">➕ Create Activity</button>
- <button
-    id="ribbonSaveBtn"
-    class="ribbon-btn"
-    onclick="saveExerciseManually()">
+  <button id="ribbonSaveBtn" class="ribbon-btn">
     💾 Save
 </button>
   <span class="ribbon-save" id="ribbonSaveStatus">💾 Saved --:--:--</span>
@@ -2155,21 +2152,18 @@ async function saveExerciseManually() {
     return;
   }
 
-  const btn = document.getElementById("ribbonSaveBtn");
-const saveStatus = document.getElementById("saveStatus");
+  const btn = document.getElementById("saveExBtn");
+  const saveStatus = document.getElementById("saveStatus");
 
-if (btn) {
-    btn.disabled = true;
-    btn.innerText = "💾 Saving...";
-}
+  btn.disabled = true;
+  btn.innerText = "💾 Saving…";
   updateRibbonSaveStatus('saving');
 
   if (saveStatus) { saveStatus.className = "status"; saveStatus.innerText = "Saving…"; }
 
   try {
     const payload = buildExercisePayload();
-console.log("Manual payload:", payload);
-    console.log("Manual idToken:", payload.idToken);
+
     const res = await fetch(WORKER + "/save-teacher-exercise", {
       method: "POST",
       headers: {
@@ -2194,9 +2188,9 @@ console.log("Manual payload:", payload);
     if (saveStatus) { saveStatus.className = "status error"; saveStatus.innerText = "❌ Could not save: " + e.message; }
     updateRibbonSaveStatus('unsaved');
   }
-  if (btn) {
+  finally {
     btn.disabled = false;
-    btn.innerText = "💾 Save";
+    btn.innerText = "💾 Save Exercise";
   }
 }
 // ============================================================
