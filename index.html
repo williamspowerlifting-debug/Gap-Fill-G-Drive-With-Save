@@ -1121,6 +1121,7 @@ exerciseProgressTarget = 0;
 document.getElementById("exerciseProgressBar").style.width = "0%";
     setExerciseProgress(40, "Processing video...");
     revealStep("exerciseDetailsCard");
+    hideHeaderActivitiesButton();
     revealStep("step2Card");
 
     await waitForBunnyReady();
@@ -1209,6 +1210,7 @@ function useVideoLink() {
 
   showVideoPlayer();
   revealStep("exerciseDetailsCard");
+  hideHeaderActivitiesButton();
   revealStep("step2Card");
   autoTranscribe();
 }
@@ -1271,6 +1273,7 @@ async function useGoogleDriveLink() {
     status.innerText = "✅ Imported from Google Drive! Processing & transcribing…";
 
     revealStep("exerciseDetailsCard");
+    hideHeaderActivitiesButton();
 
 setExerciseProgress(25, "Importing from Google Drive...");
 
