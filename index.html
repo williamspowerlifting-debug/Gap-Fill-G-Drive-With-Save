@@ -2168,7 +2168,8 @@ if (btn) {
 
   try {
     const payload = buildExercisePayload();
-
+console.log("Manual payload:", payload);
+    console.log("Manual idToken:", payload.idToken);
     const res = await fetch(WORKER + "/save-teacher-exercise", {
       method: "POST",
       headers: {
