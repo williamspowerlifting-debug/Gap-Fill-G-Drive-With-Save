@@ -1305,7 +1305,10 @@ function showVideoPlayer() {
 }
 
 function revealStep(id) { document.getElementById(id).style.display = "block"; }
-
+function hideHeaderActivitiesButton() {
+  const btn = document.getElementById("headerActivitiesBtn");
+  if (btn) btn.style.display = "none";
+}
 function escapeAttr(s) {
   return String(s).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 }
