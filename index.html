@@ -745,6 +745,11 @@ function setExerciseProgress(percent, message) {
         if (_rsEl) _rsEl.textContent = "⚠ Save failed";
     }
 }
+
+  async function saveExercise(reason = "Save") {
+  return await performAutoSave(reason);
+}
+  
 function checkAndRestoreLocalProgress() {
   const params = new URLSearchParams(window.location.search);
 
