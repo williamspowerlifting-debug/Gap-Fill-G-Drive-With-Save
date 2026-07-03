@@ -863,7 +863,7 @@ window.openSavedExercises = async function fallbackOpenSavedExercises() {
     if (overlay) overlay.classList.add("show");
     if (list) list.innerHTML = '<p style="color:#999;">Loading…</p>';
 
-    const res = await fetch(WORKER + "/list-teacher-exercises?teacherId=" + encodeURIComponent(getTeacherId()));
+    const res = await fetch(WORKER + "/list-teacher-exercises?teacherId=" + encodeURIComponent(getTeacherId()), { credentials: "include" });
     if (!res.ok) throw new Error("Could not load exercises");
     const data = await res.json();
     const exercises = data.exercises || [];
@@ -923,32 +923,32 @@ function handleCredentialResponse(response) {
     name: payload.name,
     picture: payload.picture,
   };
-  // store both a lightweight user object and the raw id token
+  // Store lightweight user object for UI — idToken is NOT stored; the server
+  // session (HttpOnly cookie) handles all authenticated requests from here.
   const prevTeacherId = localStorage.getItem('teacherId');
   localStorage.setItem('googleUser', JSON.stringify(googleUser));
-  localStorage.setItem('idToken', response.credential);
+  localStorage.removeItem('idToken'); // remove any stale token from old sessions
 
-  // If the user had an anonymous teacherId (t_...), migrate their saved exercises into their Google account.
-  if (prevTeacherId && prevTeacherId.startsWith('t_')) {
-    (async () => {
-      try {
-        const res = await fetch(WORKER + '/migrate-teacher-exercises', {
-          method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ idToken: response.credential, oldTeacherId: prevTeacherId })
-        });
-        const data = await res.json().catch(() => ({}));
-        console.log('Migration result', data);
-      } catch (e) {
-        console.warn('Migration failed', e);
-      } finally {
-        // Update UI after migration attempt
-        updateAuthUI();
-      }
-    })();
-  } else {
-    // No migration needed; just update UI
-    updateAuthUI();
-  }
+  // POST the idToken to the Worker ONCE: it verifies it, creates a D1 session,
+  // and returns a 30-day HttpOnly cookie — no further Google calls needed.
+  (async () => {
+    try {
+      const res = await fetch(WORKER + '/google-login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          idToken: response.credential,
+          oldTeacherId: prevTeacherId || null
+        })
+      });
+      if (!res.ok) console.warn('Session login failed:', await res.text());
+    } catch (e) {
+      console.warn('Session login error:', e);
+    } finally {
+      updateAuthUI();
+    }
+  })();
 }
 
 function initGoogleSignIn() {
@@ -979,11 +979,12 @@ function updateAuthUI() {
 }
 
 function signOut() {
+  // Delete the server-side session (HttpOnly cookie cleared by server)
+  fetch(WORKER + '/logout', { method: 'POST', credentials: 'include' }).catch(() => {});
   localStorage.removeItem('googleUser');
-  // remove google-backed teacherId and idToken so fallback random id is used
   localStorage.removeItem('teacherId');
-  localStorage.removeItem('idToken');
-  // re-generate anon id for session
+  localStorage.removeItem('idToken'); // remove legacy key if present
+  // re-generate anon id for this session
   getTeacherId();
   if (window.google && google.accounts && google.accounts.id) {
     try { google.accounts.id.revoke(localStorage.getItem('googleUser'), () => {}); } catch (e) {}
@@ -2110,7 +2111,6 @@ function buildExercisePayload(lessonId) {
 
   return {
     teacherId: getTeacherId(),
-    idToken: localStorage.getItem('idToken') || null,
     exerciseId: currentExerciseId || null,
     name: name,
     createdAt: new Date().toISOString(),
@@ -2132,6 +2132,7 @@ async function autoSaveExercise(lessonId) {
     const res = await fetch(WORKER + "/save-teacher-exercise", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
+      credentials: "include",
       body: JSON.stringify(payload)
     });
     const data = await res.json();
@@ -2166,6 +2167,7 @@ async function saveExerciseManually() {
       headers: {
         "Content-Type": "application/json"
       },
+      credentials: "include",
       body: JSON.stringify(payload)
     });
 
@@ -2200,7 +2202,7 @@ async function openSavedExercises() {
   list.innerHTML = '<p style="color:#999;">Loading…</p>';
 
   try {
-    const res = await fetch(WORKER + "/list-teacher-exercises?teacherId=" + encodeURIComponent(getTeacherId()));
+    const res = await fetch(WORKER + "/list-teacher-exercises?teacherId=" + encodeURIComponent(getTeacherId()), { credentials: "include" });
     if (!res.ok) throw new Error("Could not load exercises");
     const data = await res.json();
     const exercises = data.exercises || [];
@@ -2261,7 +2263,8 @@ async function openSavedExercise(exerciseId) {
 
   try {
     const res = await fetch(WORKER + "/load-teacher-exercise?teacherId=" +
-      encodeURIComponent(getTeacherId()) + "&exerciseId=" + encodeURIComponent(exerciseId));
+      encodeURIComponent(getTeacherId()) + "&exerciseId=" + encodeURIComponent(exerciseId),
+      { credentials: "include" });
     if (!res.ok) throw new Error("Could not load activity");
     const ex = await res.json();
 
@@ -2370,11 +2373,11 @@ async function generateLinkForSaved(exerciseId) {
 async function deleteSavedExercise(exerciseId) {
   if (!confirm("Are you sure you want to delete this activity? This cannot be undone.")) return;
   try {
-    const idToken = localStorage.getItem('idToken') || null;
-    const body = { teacherId: getTeacherId(), exerciseId, idToken };
+    const body = { teacherId: getTeacherId(), exerciseId };
     const res = await fetch(WORKER + "/delete-teacher-exercise", {
       method: "DELETE",
       headers: { "Content-Type": "application/json" },
+      credentials: "include",
       body: JSON.stringify(body)
     });
     if (!res.ok) throw new Error("Delete failed");
