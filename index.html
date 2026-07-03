@@ -730,10 +730,6 @@ function setExerciseProgress(percent, message) {
     window.open(location.pathname + "?mode=new", "_blank", "noopener");
 }
   async function manualSaveExercise() {
-
-  // Allow one manual save attempt even if autosave is paused.
-  autoSavePaused = false;
-
   await performAutoSave("Saved manually");
 }
   async function performAutoSave(reason = "") {
@@ -1040,8 +1036,6 @@ let exercisePulseDirection = 1;
 // Current exercise tracking (for auto-save after link generation)
 let currentExerciseId = null;
 let sectionEndToolActive = false;
-  
-let autoSavePaused = false;
 
 // ============================================================
 // 🎬 VIDEO HANDLING
@@ -2136,7 +2130,6 @@ function buildExercisePayload(lessonId) {
 }
 
 async function autoSaveExercise(lessonId) {
-  if (autoSavePaused) return;
   if (!sentences.length) return;
   try {
     const payload = buildExercisePayload(lessonId);
@@ -2147,21 +2140,9 @@ async function autoSaveExercise(lessonId) {
       body: JSON.stringify(payload)
     });
     const data = await res.json();
-
-if (res.status === 401) {
-  autoSavePaused = true;
-
-  const ribbon = document.getElementById("ribbonSaveStatus");
-  if (ribbon) {
-    ribbon.innerText = "⚠️ Please sign in, then press Save";
-  }
-
-  return;
-}
-
-if (res.ok && data.exerciseId) {
-  currentExerciseId = data.exerciseId;
-}
+    if (res.ok && data.exerciseId) {
+      currentExerciseId = data.exerciseId;
+    }
   } catch (e) {
     console.warn("Auto-save failed silently:", e);
   }
