@@ -1367,6 +1367,8 @@
         if (progress) progress.style.display = "none";
         if (save) save.style.display = "block";
       }
+      let pendingDoneToast = false;
+
       function updateAutoSaveStatus() {
         const now = new Date();
         const time = now.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" });
@@ -1458,7 +1460,8 @@
           }
 
           _applyRibbonSaveResult({ status: "SUCCESS", exerciseId: data.exerciseId });
-          if (reason === "Done button") {
+          if (reason === "Done button" || pendingDoneToast) {
+            pendingDoneToast = false;
             showSuccessToast("✓ Activity saved successfully\nYou can safely close this page.");
           }
           return { status: "SUCCESS", exerciseId: data.exerciseId };
@@ -4113,6 +4116,7 @@
 
       // ── Done button ───────────────────────────────────────────────────────────────
       async function doneEditing() {
+        pendingDoneToast = true;
         return saveExercise("Done button");
       }
     </script>
