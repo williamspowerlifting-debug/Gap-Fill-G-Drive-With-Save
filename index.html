@@ -144,6 +144,56 @@
         color: #991b1b;
       }
 
+      .success-toast {
+        position: fixed;
+        z-index: 2000;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        max-width: min(280px, calc(100vw - 24px));
+        padding: 10px 12px;
+        border-radius: 999px;
+        background: #ecfdf3;
+        color: #065f46;
+        border: 1px solid #a7f3d0;
+        box-shadow: 0 10px 24px rgba(16, 185, 129, 0.14);
+        font-size: 14px;
+        font-weight: 600;
+        pointer-events: none;
+        opacity: 0;
+        transform: translateY(8px);
+        transition: opacity 0.2s ease, transform 0.2s ease;
+      }
+      .success-toast.show {
+        opacity: 1;
+        transform: translateY(0);
+      }
+      .success-toast-icon {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 20px;
+        height: 20px;
+        border-radius: 50%;
+        background: #10b981;
+        color: white;
+        font-size: 12px;
+        flex-shrink: 0;
+      }
+      @media (max-width: 640px) {
+        .success-toast {
+          left: 50% !important;
+          right: auto;
+          transform: translate(-50%, 8px);
+          bottom: 16px;
+          top: auto;
+          border-radius: 999px;
+        }
+        .success-toast.show {
+          transform: translate(-50%, 0);
+        }
+      }
+
       .progress-wrap {
         background: #e5e7eb;
         border-radius: 8px;
@@ -1113,11 +1163,6 @@
           <button class="secondary" onclick="redoSentences()" id="redoBtn" title="Redo" disabled="">↪ Redo</button>
         </div>
         <div class="transcript-box" id="transcriptBox"></div>
-        <div id="doneButtonRow" style="margin-top: 16px; display: flex; justify-content: flex-start">
-          <button class="success" id="doneBtn" onclick="doneEditing()" style="padding: 10px 24px; font-size: 15px">
-            ✅ Done
-          </button>
-        </div>
       </div>
       <div id="editFooter" style="display: none; justify-content: flex-end; gap: 10px; margin-top: 12px">
         <button class="secondary" onclick="cancelTranscriptEdit()">❌ Cancel Changes</button>
@@ -1134,7 +1179,11 @@
         <button class="success full" onclick="generateLink()">🔗 Generate Student Link</button>
         <div class="status" id="link"></div>
 
-        <div style="margin-top: 12px; border-top: 1px solid #e5e7eb; padding-top: 12px"></div>
+        <div style="margin-top: 12px; border-top: 1px solid #e5e7eb; padding-top: 12px; display: flex; justify-content: flex-end; flex-wrap: wrap">
+          <button class="success" id="doneBtn" onclick="doneEditing()" style="padding: 10px 24px; font-size: 15px">
+            ✅ Done
+          </button>
+        </div>
       </div>
     </div>
 
@@ -1324,6 +1373,32 @@
         const _rsEl = document.getElementById("ribbonSaveStatus");
         if (_rsEl) _rsEl.textContent = "✓ Saved " + time;
       }
+      function showSuccessToast(message) {
+        const existingToast = document.querySelector(".success-toast");
+        if (existingToast) existingToast.remove();
+
+        const toast = document.createElement("div");
+        toast.className = "success-toast";
+        toast.innerHTML = `<span class="success-toast-icon">✓</span><span style="white-space: pre-line;">${message}</span>`;
+        document.body.appendChild(toast);
+
+        const button = document.getElementById("doneBtn");
+        if (button) {
+          const rect = button.getBoundingClientRect();
+          toast.style.top = `${rect.top + window.scrollY - 64}px`;
+          toast.style.left = `${Math.min(window.innerWidth - 300, rect.left + window.scrollX)}px`;
+        } else {
+          toast.style.bottom = "24px";
+          toast.style.right = "24px";
+        }
+
+        requestAnimationFrame(() => toast.classList.add("show"));
+
+        window.setTimeout(() => {
+          toast.classList.remove("show");
+          window.setTimeout(() => toast.remove(), 220);
+        }, 3000);
+      }
       function createNewExercise() {
         window.open(location.pathname + "?mode=new", "_blank", "noopener");
       }
@@ -1383,6 +1458,9 @@
           }
 
           _applyRibbonSaveResult({ status: "SUCCESS", exerciseId: data.exerciseId });
+          if (reason === "Done button") {
+            showSuccessToast("✓ Activity saved successfully\nYou can safely close this page.");
+          }
           return { status: "SUCCESS", exerciseId: data.exerciseId };
         } catch (e) {
           console.warn("saveExercise failed:", e);
