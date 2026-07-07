@@ -2668,7 +2668,7 @@
         }
 
         box.innerHTML = html;
-        updateUndoRedoBtns();
+        updateUndoRedoButtons();
       }
       function updateHelpTooltip(editModeActive) {
         const helpEl = document.querySelector(".transcript-help");
@@ -3860,7 +3860,7 @@ if (nextSection >= 0) {
         undoStack.push(JSON.stringify(sentences));
         if (undoStack.length > 50) undoStack.shift();
         redoStack = [];
-        updateUndoRedoBtns();
+        updateUndoRedoButtons();
       }
 
       function updateUndoRedoButtons() {
@@ -3897,7 +3897,7 @@ if (nextSection >= 0) {
         if (!undoStack.length) return;
         redoStack.push(JSON.stringify(sentences));
         sentences = JSON.parse(undoStack.pop());
-        updateUndoRedoBtns();
+        updateUndoRedoButtons();
         if (editModeActive) { renderTranscriptEditMode(); } else { renderTranscript(); }
         performAutoSave("Undo");
       }
@@ -3907,7 +3907,7 @@ if (nextSection >= 0) {
         if (editModeActive) return;
         undoStack.push(JSON.stringify(sentences));
         sentences = JSON.parse(redoStack.pop());
-        updateUndoRedoBtns();
+        updateUndoRedoButtons();
         if (editModeActive) { renderTranscriptEditMode(); } else { renderTranscript(); }
         performAutoSave("Redo");
       }
@@ -4003,7 +4003,7 @@ if (nextSection >= 0) {
         originalTranscript = originalTranscript ? JSON.parse(JSON.stringify(originalTranscript)) : null;
         undoStack = [];
         redoStack = [];
-        updateUndoRedoBtns();
+        updateUndoRedoButtons();
         renderTranscript();
 
         const result = await saveExercise("Duplicated exercise");
@@ -4038,7 +4038,7 @@ if (nextSection >= 0) {
         currentTags = [];
         undoStack = [];
         redoStack = [];
-        updateUndoRedoBtns();
+        updateUndoRedoButtons();
         renderTagRow();
         renderTranscript();
         return saveExercise("Duplicated from original transcript");
