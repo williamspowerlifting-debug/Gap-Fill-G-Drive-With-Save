@@ -2442,7 +2442,49 @@ box.innerHTML = html;
   return groups;
 }
       
-      
+      function renderTranscript() {
+        const box = document.getElementById("transcriptBox");
+        box.contentEditable = "false"; // Lock it down when not in edit mode 🔒
+        box.classList.remove("edit-mode");
+
+        if (!sentences.length) {
+          box.innerHTML = "<i>No transcript.</i>";
+          return;
+        }
+
+        box.innerHTML = sentences
+          .map((s, si) => {
+            const wordsHtml = s.words
+              .map((w, wi) => {
+                const cls = "transcript-word" + (w.isGap ? " gap" : "");
+                const id = "tw_" + si + "_" + wi;
+                return (
+                  '<span class="' +
+                  cls +
+                  '" id="' +
+                  id +
+                  '" data-sent="' +
+                  si +
+                  '" data-word="' +
+                  wi +
+                  '">' +
+                  escapeHtml(w.text) +
+                  "</span>"
+                );
+              })
+              .join(" ");
+            return (
+              '<div class="transcript-sentence' +
+              (s.sectionEnd ? " section-end" : "") +
+              '" data-sent="' +
+              si +
+              '">' +
+              wordsHtml +
+              "</div>"
+            );
+          })
+          .join("");
+      }
       // Paste handler — defined once, referenced by name so we can remove it
       function _handleEditPaste(e) {
         e.preventDefault();
