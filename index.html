@@ -2557,6 +2557,7 @@
         sentences = JSON.parse(JSON.stringify(editSnapshot));
         editSnapshot = null;
         editModeActive = false;
+        updateUndoRedoButtons();
         box.contentEditable = "false";
         box.classList.remove("edit-mode");
 
@@ -2679,10 +2680,11 @@
           helpEl.style.borderLeftColor = "#4f46e5";
           helpEl.style.color = "#1e40af";
 
-          helpEl.innerHTML =
-            "✏️ <b>Edit text directly in the transcript.</b><br>" +
-            "Gap words (yellow) stay highlighted and update automatically.<br>" +
-            "⚠️ <b>Replace full words when editing gaps.</b>";
+         helpEl.innerHTML =
+  "✏️ <b>Edit text directly in the transcript.</b><br>" +
+  "Gap words (yellow) stay highlighted and update automatically.<br>" +
+  "⚠️ <b>Replace full words when editing gaps.</b><br>" +
+  "↩️ Use <b>Ctrl+Z</b> (Windows) or <b>Cmd+Z</b> (Mac) to undo text edits.";
         } else {
           helpEl.style.background = "";
           helpEl.style.borderLeftColor = "";
