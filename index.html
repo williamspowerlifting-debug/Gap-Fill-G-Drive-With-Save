@@ -25,6 +25,53 @@
         max-width: 780px;
         margin: auto;
       }
+
+      /* ── Side-by-side layout ─────────────────────────────────────────────── */
+      #app.layout-side {
+        max-width: 1400px;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 16px;
+        align-items: flex-start;
+      }
+      #app.layout-side > * { flex: 0 0 100%; }
+      #app.layout-side > #step2Card {
+        flex: 0 0 calc(48% - 8px);
+        position: sticky;
+        top: 16px;
+        max-height: calc(100vh - 32px);
+        overflow-y: auto;
+      }
+      #app.layout-side > #rightPane { flex: 1; min-width: 0; }
+
+      /* ── Plain-text sentence editing ─────────────────────────────────────── */
+      .edit-sentence {
+        border: 1.5px solid #e5e7eb;
+        border-radius: 6px;
+        padding: 6px 10px;
+        margin-bottom: 8px;
+        background: #fff;
+        outline: none;
+        font-family: inherit;
+        font-size: inherit;
+        line-height: 1.6;
+        cursor: text;
+        white-space: pre-wrap;
+      }
+      .edit-sentence:focus {
+        border-color: #6366f1;
+        box-shadow: 0 0 0 2px rgba(99,102,241,0.15);
+      }
+      /* Gap words highlighted inside the edit-mode contenteditable divs */
+      .edit-gap {
+        background: #fde68a;
+        color: #78350f;
+        font-weight: 600;
+        padding: 1px 5px;
+        border-radius: 3px;
+        border: 1.5px solid #f59e0b;
+        /* keep gap readable when div is focused */
+      }
       h1 {
         font-size: 30px;
         margin-bottom: 6px;
@@ -1124,6 +1171,8 @@
           <button class="secondary" onclick="toggleEditMode()" id="editModeBtn">✏️ Edit Text</button>
           <button class="secondary" onclick="undoSentences()" id="undoBtn" title="Undo" disabled="">↩ Undo</button>
           <button class="secondary" onclick="redoSentences()" id="redoBtn" title="Redo" disabled="">↪ Redo</button>
+          <span style="margin-left: 12px; font-size: 13px; color: #6b7280; align-self: center;">Editor view:</span>
+          <button class="secondary" id="layoutToggleBtn" onclick="toggleLayout()">🖥 Side by Side</button>
         </div>
         <div class="transcript-box" id="transcriptBox"></div>
       </div>
@@ -2286,31 +2335,7 @@
       // ✏️ CONTENTEDITABLE TRANSCRIPT EDITOR
       // ============================================================
       // SELECTION BOUNDARY OBSERVER: Enforces bounding ranges when a word node goes empty
-      document.getElementById("transcriptBox").addEventListener("keyup", function (e) {
-        if (!editModeActive || e.key !== "Backspace") return;
-
-        const selection = window.getSelection();
-        if (!selection.rangeCount) return;
-
-        const range = selection.getRangeAt(0);
-        const container = range.startContainer;
-
-        // Track if our cursor dropped onto an element node instead of a text node
-        if (container.nodeType === Node.ELEMENT_NODE && container.classList.contains("transcript-sentence")) {
-          // Determine which child element matches the caret's index position
-          const targetNode = container.childNodes[range.startOffset - 1] || container.childNodes[range.startOffset];
-
-          if (targetNode && targetNode.classList.contains("gap") && targetNode.textContent === "") {
-            // Forcefully snap the focus selection frame back inside our gap container bounds
-            const forcedRange = document.createRange();
-            forcedRange.selectNodeContents(targetNode);
-            forcedRange.collapse(true);
-
-            selection.removeAllRanges();
-            selection.addRange(forcedRange);
-          }
-        }
-      });
+      // Cursor-rescue handler removed: plain-text per-sentence editing prevents cursor escape.
 
       function toggleEditMode() {
         if (editModeActive) return;
@@ -2318,59 +2343,47 @@
         updateHelpTooltip(editModeActive);
         const btn = document.getElementById("editModeBtn");
         const footer = document.getElementById("editFooter");
-        const undoBtn = document.getElementById("undoBtn");
-        const redoBtn = document.getElementById("redoBtn");
         editSnapshot = JSON.parse(JSON.stringify(sentences));
         if (btn) btn.style.display = "none";
-        if (undoBtn) undoBtn.style.display = "none";
-        if (redoBtn) redoBtn.style.display = "none";
         if (footer) footer.style.display = "flex";
-
-        // Call the function to switch the DOM into editable mode
         renderTranscriptEditMode();
       }
 
       function renderTranscriptEditMode() {
         const box = document.getElementById("transcriptBox");
-        box.contentEditable = "true"; // Unlock the editing region 🔓
+        // Outer box is NOT contenteditable — each sentence div is independently editable.
+        // This lets the browser handle text naturally without fighting word-span structure.
+        box.contentEditable = "false";
         box.classList.add("edit-mode");
 
-        // Attach safe key and paste filters so browser defaults don't break HTML structures
         box.addEventListener("paste", _handleEditPaste);
-        box.addEventListener("keydown", _handleEditBackspace);
+        box.addEventListener("keydown", _handleEditKeydown);
 
         if (!sentences.length) {
-          box.innerHTML = "<div></div>";
+          box.innerHTML = "<div contenteditable=\"true\" class=\"edit-sentence transcript-sentence\"></div>";
           return;
         }
 
-        // Render text inside structural containers so our linear timing walker can track attributes
         box.innerHTML = sentences
           .map((s, si) => {
-            const wordsHtml = s.words
-              .map((w, wi) => {
-                const cls = "transcript-word" + (w.isGap ? " gap" : "");
-                return (
-                  '<span class="' +
-                  cls +
-                  '" data-sent="' +
-                  si +
-                  '" data-word="' +
-                  wi +
-                  '">' +
-                  escapeHtml(w.text) +
-                  "</span>"
-                );
-              })
-              .join(" ");
-
+            // Render each word: gap words get a highlighted <mark> so the teacher
+            // can see which words are gaps while editing. The node-walker in
+            // rebuildSentencesFromDOM reads these marks back to preserve gap identity.
+            const inner = s.words.map(function(w) {
+              if (w.isGap) {
+                return '<mark class="edit-gap" data-gap="1">' + escapeHtml(w.text) + '</mark>';
+              }
+              return escapeHtml(w.text);
+            }).join(' ');
             return (
-              '<div class="transcript-sentence' +
+              '<div class="edit-sentence transcript-sentence' +
               (s.sectionEnd ? " section-end" : "") +
-              '" data-sent="' +
+              '" contenteditable="true" data-sent="' +
               si +
+              '" data-section-end="' +
+              (s.sectionEnd ? "1" : "0") +
               '">' +
-              wordsHtml +
+              inner +
               "</div>"
             );
           })
@@ -2428,224 +2441,97 @@
         document.execCommand("insertText", false, text);
       }
 
-      // Bug #1 fix: keep caret locked inside .transcript-word span when backspacing to empty.
-      // Uses keydown (more reliably cancelable than beforeinput in Chrome) to intercept the
-      // final backspace on a .transcript-word span. Inserts a U+200B placeholder so the span
-      // never becomes truly empty and the caret stays inside the highlight.
-      // U+200B is stripped in rebuildSentencesFromDOM() before saving.
-      function _handleEditBackspace(e) {
-        if (e.key !== "Backspace") return;
-
-        const sel = window.getSelection();
-        if (!sel || !sel.rangeCount) return;
-
-        const range0 = sel.getRangeAt(0);
-
-        // Walk up from the caret anchor to find the nearest .transcript-word span
-        let node = range0.startContainer;
-        let span = null;
-        while (node && node !== document) {
-          if (node.nodeType === 1 && node.classList && node.classList.contains("transcript-word")) {
-            span = node;
-            break;
-          }
-          node = node.parentNode;
-        }
-        if (!span) return;
-
-        // Strip any accumulated ZWS to get the real character count
-        const realText = span.textContent.replace(/​/g, "");
-
-        // Intercept when exactly 1 real char remains (about to go empty)
-        // OR when the span is already empty / ZWS-only (caret re-entered from outside)
-        if (realText.length > 1) return;
-
-        // Prevent the browser from performing the deletion (and ejecting the caret)
-        e.preventDefault();
-
-        // If there is still 1 real char, clear it; ensure span holds only ZWS
-        span.textContent = "​";
-
-        // Pin caret to offset 0 inside the ZWS text node
-        const textNode = span.firstChild;
-        const r = document.createRange();
-        r.setStart(textNode, 0);
-        r.collapse(true);
-        const s = window.getSelection();
-        s.removeAllRanges();
-        s.addRange(r);
+      // Prevents Enter from splitting a sentence div into two paragraphs.
+      // Backspace and all other keys are handled natively by the browser — no workarounds needed
+      // because each sentence is its own isolated contenteditable div.
+      function _handleEditKeydown(e) {
+        if (e.key === "Enter") e.preventDefault();
       }
 
       function rebuildSentencesFromDOM() {
         const box = document.getElementById("transcriptBox");
-        const flatWords = [];
+        const editDivs = box.querySelectorAll(".edit-sentence[data-sent]");
+        if (!editDivs.length) return;
 
-        // Helper to parse plain text tokens and retain structural flags
-        function processTextTokens(text, isGap, originalSentIdx) {
-          const tokens = text
-            .replace(/\u200B/g, "")
-            .trim()
-            .split(/\s+/)
-            .filter(Boolean);
-          tokens.forEach((tok) => {
-            flatWords.push({
-              text: tok,
-              isGap: isGap,
-              sentIdx: originalSentIdx,
-            });
-          });
-        }
-
-        // Walk linearly through all elements and text nodes inside the container
-        const walker = document.createTreeWalker(box, NodeFilter.SHOW_TEXT | NodeFilter.SHOW_ELEMENT, null, false);
-        let currentNode;
-
-        while ((currentNode = walker.nextNode())) {
-          if (currentNode.nodeType === Node.ELEMENT_NODE) {
-            if (currentNode.tagName === "FONT" || currentNode.style?.backgroundColor) {
-              currentNode.classList.add("gap");
-            }
-          } else if (currentNode.nodeType === Node.TEXT_NODE) {
-            const parent = currentNode.parentNode;
-            if (parent === box && !currentNode.textContent.trim()) continue;
-
-            let isGap = false;
-            let sentIdx = null;
-
-            let p = parent;
-            while (p && p !== box) {
-              if (p.classList && p.classList.contains("transcript-word")) {
-                if (p.classList.contains("gap") || p.getAttribute("data-gap") === "1" || p.tagName === "FONT") {
-                  isGap = true;
-                }
-                if (p.hasAttribute("data-sent")) {
-                  sentIdx = parseInt(p.getAttribute("data-sent"), 10);
-                }
-                break;
-              }
-              if (p.classList && p.classList.contains("transcript-sentence")) {
-                if (p.hasAttribute("data-sent")) {
-                  sentIdx = parseInt(p.getAttribute("data-sent"), 10);
-                }
-                break;
-              }
-              p = p.parentNode;
-            }
-
-            processTextTokens(currentNode.textContent, isGap, sentIdx);
-          }
-        }
-
-        if (flatWords.length === 0) return;
-
-        // Fill in missing timeline positions for newly typed text based on proximity
-        let lastValidSentIdx = 0;
-        for (let i = 0; i < flatWords.length; i++) {
-          if (flatWords[i].sentIdx !== null && !isNaN(flatWords[i].sentIdx)) {
-            lastValidSentIdx = flatWords[i].sentIdx;
-          } else {
-            flatWords[i].sentIdx = lastValidSentIdx;
-          }
-        }
-
-        // Pre-populate empty baseline structures matching original counts
-        // Also read the section-end class from the DOM as the source of truth,
-        // since teachers may have toggled markers while in edit mode.
-        const sentenceDivs = document.getElementById("transcriptBox").querySelectorAll(".transcript-sentence");
-        const domSectionEnd = {};
-        sentenceDivs.forEach((div) => {
-          const si = parseInt(div.getAttribute("data-sent"), 10);
-          if (!isNaN(si)) domSectionEnd[si] = div.classList.contains("section-end");
-        });
-
-        const newSentences = [];
-        for (let i = 0; i < sentences.length; i++) {
-          newSentences.push({
-            words: [],
-            startTime: sentences[i].startTime,
-            endTime: sentences[i].endTime,
-            originalText: "",
-            sectionEnd: i in domSectionEnd ? domSectionEnd[i] : !!sentences[i].sectionEnd,
-          });
-        }
-
-        // Distribute extracted text items back into their baseline blocks
-        flatWords.forEach((w) => {
-          let idx = w.sentIdx;
-          if (idx >= newSentences.length) idx = newSentences.length - 1;
-          if (idx < 0) idx = 0;
-          newSentences[idx].words.push({
-            text: w.text,
-            isGap: w.isGap,
-            time: 0,
-          });
-        });
-
-        // 💡 FIX: Accumulate and stretch timeline windows over consecutive empty segments
         const finalSentences = [];
 
-        for (let i = 0; i < newSentences.length; i++) {
-          const current = newSentences[i];
+        editDivs.forEach(function(div) {
+          const si = parseInt(div.getAttribute("data-sent"), 10);
+          if (isNaN(si) || si < 0 || si >= sentences.length) return;
+          const original = sentences[si];
 
-          if (current.words.length > 0) {
-            current.originalText = current.words.map((w) => w.text).join(" ");
-            finalSentences.push(current);
-          } else {
-            // Sentence was removed. Pass its timestamp duration to the closest valid sentence block
-            if (finalSentences.length > 0) {
-              // Stretch the preceding active sentence forward to absorb this gap
-              finalSentences[finalSentences.length - 1].endTime = Math.max(
-                finalSentences[finalSentences.length - 1].endTime,
-                current.endTime,
-              );
-            } else {
-              // If the first sentences were deleted, find the first available active sentence and stretch it backward
-              let nextValid = null;
-              for (let j = i + 1; j < newSentences.length; j++) {
-                if (newSentences[j].words.length > 0) {
-                  nextValid = newSentences[j];
-                  break;
-                }
-              }
-              if (nextValid) {
-                nextValid.startTime = Math.min(nextValid.startTime, current.startTime);
-              }
+          // Walk DOM nodes to collect words with their gap status.
+          // Text nodes outside .edit-gap marks = non-gap words.
+          // Anything inside a .edit-gap mark = gap word.
+          // This survives any DOM mutations the browser makes while editing.
+          function collectWords(node, isGap, result) {
+            if (node.nodeType === 3) { // TEXT_NODE
+              const toks = (node.textContent || '').replace(/\u200B/g, '').split(/\s+/).filter(Boolean);
+              toks.forEach(function(t) { result.push({ text: t, isGap: isGap }); });
+            } else if (node.nodeType === 1) { // ELEMENT_NODE
+              var g = isGap || node.classList.contains('edit-gap');
+              node.childNodes.forEach(function(c) { collectWords(c, g, result); });
             }
           }
-        }
+          var wordTokens = [];
+          collectWords(div, false, wordTokens);
 
-        // 💡 FIX: Stitch the timeline together continuously to eliminate any remaining cutting bugs
-        for (let i = 0; i < finalSentences.length; i++) {
-          if (i < finalSentences.length - 1) {
-            // Force current block to play perfectly up until the exact millisecond the next starts
-            finalSentences[i].endTime = Math.max(finalSentences[i].endTime, finalSentences[i + 1].startTime);
-          } else {
-            finalSentences[i].endTime = finalSentences[i].endTime + 1.5;
+          if (!wordTokens.length) {
+            // Empty sentence — absorb its time window into the preceding sentence
+            if (finalSentences.length > 0) {
+              finalSentences[finalSentences.length - 1].endTime = Math.max(
+                finalSentences[finalSentences.length - 1].endTime,
+                original.endTime
+              );
+            }
+            return;
           }
+
+          // Carry over word timing from original where positions align;
+          // gap identity comes directly from the node-walker above.
+          const words = wordTokens.map(function(tok, ti) {
+            return {
+              text: tok.text,
+              isGap: tok.isGap,
+              time: ti < original.words.length ? (original.words[ti].time || 0) : 0,
+            };
+          });
+
+          finalSentences.push({
+            words: words,
+            startTime: original.startTime,
+            endTime: original.endTime,
+            originalText: words.map(function(w) { return w.text; }).join(" "),
+            sectionEnd: !!original.sectionEnd,
+            mergeNext: !!original.mergeNext,  // always preserve merge groups
+          });
+        });
+
+        // Stitch timelines so playback is continuous
+        for (let i = 0; i < finalSentences.length - 1; i++) {
+          finalSentences[i].endTime = Math.max(
+            finalSentences[i].endTime,
+            finalSentences[i + 1].startTime
+          );
+        }
+        if (finalSentences.length > 0) {
+          finalSentences[finalSentences.length - 1].endTime += 1.5;
         }
 
-        if (finalSentences.length) {
+        if (finalSentences.length > 0) {
           sentences = finalSentences;
         }
       }
-
       function finishTranscriptEdit() {
-        // Remove paste listener before leaving edit mode
-        console.log(document.getElementById("transcriptBox").innerHTML);
         const box = document.getElementById("transcriptBox");
         box.removeEventListener("paste", _handleEditPaste);
-        box.removeEventListener("keydown", _handleEditBackspace);
+        box.removeEventListener("keydown", _handleEditKeydown);
 
         pushUndo();
         rebuildSentencesFromDOM();
 
         editSnapshot = null;
         editModeActive = false;
-        const undoBtn = document.getElementById("undoBtn");
-        const redoBtn = document.getElementById("redoBtn");
-
-        if (undoBtn) undoBtn.style.display = "";
-        if (redoBtn) redoBtn.style.display = "";
         updateHelpTooltip(editModeActive);
 
         box.contentEditable = "false";
@@ -2658,25 +2544,17 @@
         if (btn) btn.style.display = "";
 
         renderTranscript();
-        // 💡 SAVE HERE INSTEAD: Silently backup the progress data now that editing is finished
         performAutoSave("Transcript edited");
       }
       function cancelTranscriptEdit() {
         if (!editSnapshot) return;
 
-        // Remove paste listener before leaving edit mode
         const box = document.getElementById("transcriptBox");
         box.removeEventListener("paste", _handleEditPaste);
-
-        box.removeEventListener("keydown", _handleEditBackspace);
+        box.removeEventListener("keydown", _handleEditKeydown);
         sentences = JSON.parse(JSON.stringify(editSnapshot));
         editSnapshot = null;
         editModeActive = false;
-        const undoBtn = document.getElementById("undoBtn");
-        const redoBtn = document.getElementById("redoBtn");
-
-        if (undoBtn) undoBtn.style.display = "";
-        if (redoBtn) redoBtn.style.display = "";
         box.contentEditable = "false";
         box.classList.remove("edit-mode");
 
@@ -2721,6 +2599,7 @@
 
         let html = "";
         let i = 0;
+        let mergeGroupIdx = 0;
         while (i < sentences.length) {
           // Collect the run of sentences in this merge group
           const group = [i];
@@ -2731,8 +2610,9 @@
           const isGroup = group.length > 1;
 
           if (isGroup) {
+            mergeGroupIdx++;
             html += '<div class="merge-group">';
-            html += '<div class="merge-group-label">🔗 Grouped section (' + group.length + " sentences)</div>";
+            html += '<div class="merge-group-label">Group ' + mergeGroupIdx + ' · ' + group.length + ' sentences 🔗</div>';
           }
 
           for (let gi = 0; gi < group.length; gi++) {
@@ -3426,6 +3306,7 @@
         answers: {},
         results: {},
         submittedSentences: {},
+        remainingUnanswered: null,
         finished: false,
         isPreview: false,
         autoAdvanceTimer: null,
@@ -3628,7 +3509,7 @@
                 "," +
                 wi +
                 ',this.value)"' +
-                ' onkeydown="handleGapKey(event)"></span>'
+                ' onkeydown="handleGapKey(event)" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"></span>'
               );
             }
             return "<span>" + escapeHtml(w.text) + "</span>";
@@ -3717,7 +3598,13 @@
           clearInterval(studentState.autoAdvanceCountInterval);
           studentState.autoAdvanceTimer = null;
           studentState.autoAdvanceCountInterval = null;
-          loadSentence(studentState.currentIdx + 1);
+          const nextSection = getNextStudentSection();
+
+if (nextSection >= 0) {
+  loadSentence(nextSection);
+} else {
+  showFinalScore();
+}
         }, 6000);
       }
 
@@ -3799,15 +3686,40 @@
         return { allCorrect, hasGaps };
       }
 
+function getNextStudentSection() {
+  const total = studentState.lesson ? studentState.lesson.sentences.length : 0;
+  const next = studentState.currentIdx + 1;
+
+  // Normal navigation until the end of the activity
+  if (next < total) {
+    return next;
+  }
+
+  // After reaching the end, find the next unanswered section
+  for (let i = 0; i < total; i++) {
+    if (!studentState.submittedSentences[i]) {
+      return i;
+    }
+  }
+
+  // Everything has been submitted
+  return -1;
+}
+
       function nextSentence() {
         clearTimeout(studentState.autoAdvanceTimer);
         clearInterval(studentState.autoAdvanceCountInterval);
         studentState.autoAdvanceTimer = null;
         studentState.autoAdvanceCountInterval = null;
-        checkCurrentSentence();
-        setTimeout(() => {
-          loadSentence(studentState.currentIdx + 1);
-        }, 400);
+
+       const nextSection = getNextStudentSection();
+
+if (nextSection >= 0) {
+  loadSentence(nextSection);
+} else {
+  const submitBtn = document.getElementById("submitBtn");
+  if (submitBtn) submitBtn.focus();
+}
       }
 
       function showFinalScore() {
@@ -3961,7 +3873,7 @@
         redoStack.push(JSON.stringify(sentences));
         sentences = JSON.parse(undoStack.pop());
         updateUndoRedoBtns();
-        renderTranscript();
+        if (editModeActive) { renderTranscriptEditMode(); } else { renderTranscript(); }
         performAutoSave("Undo");
       }
 
@@ -3970,7 +3882,7 @@
         undoStack.push(JSON.stringify(sentences));
         sentences = JSON.parse(redoStack.pop());
         updateUndoRedoBtns();
-        renderTranscript();
+        if (editModeActive) { renderTranscriptEditMode(); } else { renderTranscript(); }
         performAutoSave("Redo");
       }
 
@@ -4105,6 +4017,54 @@
         renderTranscript();
         return saveExercise("Duplicated from original transcript");
       }
+
+      // ── Layout toggle ─────────────────────────────────────────────────────────────
+      let _layoutState = localStorage.getItem("preferredLayout") || "stacked";
+
+      function toggleLayout() {
+        _layoutState = _layoutState === "stacked" ? "side" : "stacked";
+        localStorage.setItem("preferredLayout", _layoutState);
+        _applyLayout();
+      }
+
+      function _applyLayout() {
+        const app = document.getElementById("app");
+        const btn = document.getElementById("layoutToggleBtn");
+        if (_layoutState === "side") {
+          // Move step3-5 and editFooter into a rightPane beside step2Card
+          let rightPane = document.getElementById("rightPane");
+          if (!rightPane) {
+            rightPane = document.createElement("div");
+            rightPane.id = "rightPane";
+            ["step3Card", "step4Card", "editFooter", "step5Card"].forEach(function(id) {
+              const el = document.getElementById(id);
+              if (el) rightPane.appendChild(el);
+            });
+            const step2 = document.getElementById("step2Card");
+            if (step2 && step2.parentNode) {
+              step2.parentNode.insertBefore(rightPane, step2.nextSibling);
+            }
+          }
+          app.classList.add("layout-side");
+          if (btn) btn.textContent = "🖥 Stacked";
+        } else {
+          // Restore rightPane children back to #app in order
+          const rightPane = document.getElementById("rightPane");
+          if (rightPane) {
+            const parent = rightPane.parentNode;
+            ["step3Card", "step4Card", "editFooter", "step5Card"].forEach(function(id) {
+              const el = document.getElementById(id);
+              if (el) parent.insertBefore(el, rightPane);
+            });
+            rightPane.remove();
+          }
+          app.classList.remove("layout-side");
+          if (btn) btn.textContent = "🖥 Side by Side";
+        }
+      }
+
+      // Apply saved layout preference on load
+      _applyLayout();
 
       // ── Done button ───────────────────────────────────────────────────────────────
       async function doneEditing() {
