@@ -4019,13 +4019,12 @@ if (nextSection >= 0) {
       }
 
       // ── Layout toggle ─────────────────────────────────────────────────────────────
-      let _layoutState = localStorage.getItem("preferredLayout") || "stacked";
+      let _layoutState = "stacked";
 
-      function toggleLayout() {
-        _layoutState = _layoutState === "stacked" ? "side" : "stacked";
-        localStorage.setItem("preferredLayout", _layoutState);
-        _applyLayout();
-      }
+function toggleLayout() {
+  _layoutState = _layoutState === "stacked" ? "side" : "stacked";
+  _applyLayout();
+}
 
       function _applyLayout() {
         const app = document.getElementById("app");
