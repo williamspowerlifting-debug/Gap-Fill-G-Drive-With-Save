@@ -2340,6 +2340,7 @@
       function toggleEditMode() {
         if (editModeActive) return;
         editModeActive = true;
+        updateUndoRedoButtons();
         updateHelpTooltip(editModeActive);
         const btn = document.getElementById("editModeBtn");
         const footer = document.getElementById("editFooter");
@@ -2532,6 +2533,7 @@
 
         editSnapshot = null;
         editModeActive = false;
+        updateUndoRedoButtons();
         updateHelpTooltip(editModeActive);
 
         box.contentEditable = "false";
@@ -3861,14 +3863,37 @@ if (nextSection >= 0) {
         updateUndoRedoBtns();
       }
 
-      function updateUndoRedoBtns() {
-        const u = document.getElementById("undoBtn");
-        const r = document.getElementById("redoBtn");
-        if (u) u.disabled = undoStack.length === 0;
-        if (r) r.disabled = redoStack.length === 0;
-      }
+      function updateUndoRedoButtons() {
+  const u = document.getElementById("undoBtn");
+  const r = document.getElementById("redoBtn");
 
+  if (editModeActive) {
+
+    if (u) {
+      u.disabled = true;
+      u.title = "Text editing uses Ctrl+Z (Windows) or Cmd+Z (Mac)";
+    }
+
+    if (r) {
+      r.disabled = true;
+      r.title = "Text editing uses Ctrl+Y (Windows) or Cmd+Shift+Z (Mac)";
+    }
+
+    return;
+  }
+
+  if (u) {
+    u.disabled = undoStack.length === 0;
+    u.title = "Undo last exercise change";
+  }
+
+  if (r) {
+    r.disabled = redoStack.length === 0;
+    r.title = "Redo last exercise change";
+  }
+}
       function undoSentences() {
+        if (editModeActive) return;
         if (!undoStack.length) return;
         redoStack.push(JSON.stringify(sentences));
         sentences = JSON.parse(undoStack.pop());
@@ -3879,6 +3904,7 @@ if (nextSection >= 0) {
 
       function redoSentences() {
         if (!redoStack.length) return;
+        if (editModeActive) return;
         undoStack.push(JSON.stringify(sentences));
         sentences = JSON.parse(redoStack.pop());
         updateUndoRedoBtns();
