@@ -2365,31 +2365,61 @@
           return;
         }
 
-        box.innerHTML = sentences
-          .map((s, si) => {
-            // Render each word: gap words get a highlighted <mark> so the teacher
-            // can see which words are gaps while editing. The node-walker in
-            // rebuildSentencesFromDOM reads these marks back to preserve gap identity.
-            const inner = s.words.map(function(w) {
-              if (w.isGap) {
-                return '<mark class="edit-gap" data-gap="1">' + escapeHtml(w.text) + '</mark>';
-              }
-              return escapeHtml(w.text);
-            }).join(' ');
-            return (
-              '<div class="edit-sentence transcript-sentence' +
-              (s.sectionEnd ? " section-end" : "") +
-              '" contenteditable="true" data-sent="' +
-              si +
-              '" data-section-end="' +
-              (s.sectionEnd ? "1" : "0") +
-              '">' +
-              inner +
-              "</div>"
-            );
-          })
-          .join("");
-      }
+        let html = "";
+let i = 0;
+
+while (i < sentences.length) {
+
+  const group = [i];
+
+  while (sentences[i].mergeNext && i < sentences.length - 1) {
+    i++;
+    group.push(i);
+  }
+
+  const isGroup = group.length > 1;
+
+  if (isGroup) {
+    html += '<div class="merge-group">';
+  }
+
+  group.forEach(function(si) {
+
+    const s = sentences[si];
+
+    const inner = s.words
+      .map(function(w) {
+        if (w.isGap) {
+          return '<mark class="edit-gap" data-gap="1">' +
+            escapeHtml(w.text) +
+            "</mark>";
+        }
+
+        return escapeHtml(w.text);
+      })
+      .join(" ");
+
+    html +=
+      '<div class="edit-sentence transcript-sentence' +
+      (s.sectionEnd ? " section-end" : "") +
+      '" contenteditable="true" data-sent="' +
+      si +
+      '" data-section-end="' +
+      (s.sectionEnd ? "1" : "0") +
+      '">' +
+      inner +
+      "</div>";
+
+  });
+
+  if (isGroup) {
+    html += "</div>";
+  }
+
+  i++;
+}
+
+box.innerHTML = html;
 
       function getMergeGroups() {
   const groups = [];
